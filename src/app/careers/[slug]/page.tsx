@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { MapPin, Briefcase, Clock, Mail, Globe, ArrowLeft, Info, Bell } from "lucide-react";
@@ -29,9 +29,10 @@ const jobData = {
   },
 };
 
-export default function JobDetailsPage({ params }: { params: { slug: string } }) {
+export default function JobDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
   const router = useRouter();
   const [isMounted, setIsMounted] = useState(false);
+  const resolvedParams = use(params);
 
   useEffect(() => {
     setIsMounted(true);
@@ -39,7 +40,7 @@ export default function JobDetailsPage({ params }: { params: { slug: string } })
 
   if (!isMounted) return null;
 
-  const job = jobData[params.slug as keyof typeof jobData];
+  const job = jobData[resolvedParams.slug as keyof typeof jobData];
 
   if (!job) {
     return (
@@ -209,7 +210,7 @@ export default function JobDetailsPage({ params }: { params: { slug: string } })
 
                     <div className="flex flex-col gap-3">
                       <Button
-                        onClick={() => router.push(`/careers/apply?role=${params.slug}`)}
+                        onClick={() => router.push(`/careers/apply?role=${resolvedParams.slug}`)}
                         className="w-full bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg shadow-primary/20 cursor-pointer"
                       >
                         Apply Now

@@ -106,7 +106,7 @@ export default function FaqContact() {
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.6, delay: 0.1 }}
             >
-              <Accordion type="single" className="w-full">
+              <Accordion className="w-full">
                 {faqs.map((faq, index) => (
                   <AccordionItem key={index} value={`item-${index}`} className="border-b border-slate-200 py-2">
                     <AccordionTrigger className="text-left font-heading font-semibold text-lg text-slate-800 hover:text-primary hover:no-underline transition-colors">
