@@ -47,7 +47,7 @@ export default function Footer() {
             <ul className="flex flex-col gap-4 text-slate-500">
               <li className="flex items-center gap-3">
                 <Mail size={18} className="text-slate-400" />
-                <a href="mailto:info@devtechitsolution.com" className="hover:text-primary transition-colors">info@devtechitsolution.com</a>
+                <a href="mailto:support@devtechitsolution.com" className="hover:text-primary transition-colors">support@devtechitsolution.com</a>
               </li>
               <li className="flex items-center gap-3">
                 <Phone size={18} className="text-slate-400" />

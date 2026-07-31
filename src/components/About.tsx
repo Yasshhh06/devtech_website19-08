@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { CheckCircle2, Mail } from "lucide-react";
-import founderImage from "./image/founder-image.png";
 
 function LinkedinIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -101,7 +100,7 @@ export default function About() {
           </div>
         </div>
 
-        {/* Founder Section */}
+        {/* Company Commitment Section */}
         <div className="mt-32 border-t border-slate-200 pt-24">
           <div className="text-center mb-16">
             <motion.h2
@@ -111,7 +110,7 @@ export default function About() {
               transition={{ duration: 0.6 }}
               className="text-3xl md:text-4xl font-heading font-bold text-slate-900 mb-4 tracking-tight"
             >
-              Meet Our <span className="text-primary">Founder</span>
+              Our Commitment to <span className="text-primary">Excellence</span>
             </motion.h2>
             <motion.p
               initial={{ opacity: 0, y: 20 }}
@@ -134,13 +133,11 @@ export default function About() {
                 className="relative rounded-3xl overflow-hidden shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] group border border-blue-100/50 bg-slate-50"
               >
                 <div className="aspect-[4/5] relative w-full h-full overflow-hidden">
-                  <Image
-                    src={founderImage}
-                    alt="Yash Sunil Mohite - Founder & CEO"
-                    fill
-                    sizes="(max-width: 768px) 100vw, 40vw"
-                    priority
-                    className="object-cover object-top group-hover:scale-[1.02] transition-transform duration-500 ease-out"
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=800"
+                    alt="DevTech Team Excellence"
+                    className="w-full h-full object-cover object-center group-hover:scale-[1.02] transition-transform duration-500 ease-out"
                   />
                   <div className="absolute inset-0 ring-1 ring-inset ring-blue-500/10 rounded-3xl pointer-events-none"></div>
                 </div>
@@ -155,48 +152,48 @@ export default function About() {
                 transition={{ duration: 0.6 }}
               >
                 <div className="inline-flex items-center px-4 py-2 bg-blue-50 text-primary font-semibold rounded-full text-sm mb-6 shadow-sm border border-blue-100/50">
-                  Founder & CEO
+                  Client-First Approach
                 </div>
                 <h3 className="text-3xl md:text-4xl font-heading font-bold text-slate-900 mb-2">
-                  Yash Sunil Mohite
+                  DevTech IT Solution
                 </h3>
                 <p className="text-xl text-slate-500 font-medium mb-4">
-                  DevTech IT Solution
+                  Transforming Visions into Reality
                 </p>
                 <div className="flex items-center gap-2 mb-8">
                   <div className="px-3 py-1 bg-slate-100 text-slate-600 text-sm font-medium rounded-md">
-                    Graduate from the University of Mumbai
+                    Trusted Global Technology Partner
                   </div>
                 </div>
 
                 <div className="space-y-4 text-lg text-slate-600 mb-10 leading-relaxed">
                   <p>
-                    Yash Sunil Mohite founded DevTech IT Solution with a vision to help businesses embrace technology through innovative, scalable, and future-ready digital solutions.
+                    At DevTech IT Solution, our vision is to help businesses embrace technology through innovative, scalable, and future-ready digital solutions that drive real impact.
                   </p>
                   <p>
-                    He believes technology should simplify business operations, improve customer experiences, and create measurable business growth. His focus is on delivering high-quality software solutions, maintaining transparent communication, and building long-term partnerships with clients worldwide.
+                    We believe technology should simplify business operations, improve customer experiences, and create measurable growth. Our core focus lies in delivering top-tier software solutions, maintaining radical transparency, and fostering long-term partnerships with clients worldwide.
                   </p>
                   <p>
-                    As a growing technology entrepreneur, he is committed to continuous learning, innovation, and building solutions that create real business value. Under his leadership, DevTech IT Solution aims to become a trusted global technology partner for startups, SMEs, and enterprises.
+                    Backed by a talented team of engineers and designers, we are committed to continuous learning, engineering excellence, and crafting digital products that push the boundaries of what's possible for startups, SMEs, and enterprises.
                   </p>
                 </div>
 
                 <div className="bg-white rounded-2xl p-6 shadow-md border border-slate-100 mb-10 grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <a
-                    href="mailto:yash@devtechitsolution.com"
+                    href="mailto:support@devtechitsolution.com"
                     className="flex items-center gap-4 group p-3 rounded-xl hover:bg-slate-50 transition-colors"
                   >
                     <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center group-hover:bg-primary transition-colors duration-300 shrink-0">
                       <Mail className="w-5 h-5 text-primary group-hover:text-white transition-colors duration-300" />
                     </div>
                     <div className="overflow-hidden">
-                      <div className="text-sm text-slate-500 mb-1">Professional Email</div>
-                      <div className="font-semibold text-slate-800 truncate">yash@devtechitsolution.com</div>
+                      <div className="text-sm text-slate-500 mb-1">Support Email</div>
+                      <div className="font-semibold text-slate-800 truncate">support@devtechitsolution.com</div>
                     </div>
                   </a>
 
                   <a
-                    href="https://www.linkedin.com/in/yash-mohite-507000215/"
+                    href="https://www.linkedin.com/in/devtech-it-solution"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-4 group p-3 rounded-xl hover:bg-slate-50 transition-colors"
@@ -206,7 +203,7 @@ export default function About() {
                     </div>
                     <div>
                       <div className="text-sm text-slate-500 mb-1">LinkedIn</div>
-                      <div className="font-semibold text-slate-800">Connect Profile</div>
+                      <div className="font-semibold text-slate-800">Company Profile</div>
                     </div>
                   </a>
                 </div>
@@ -224,7 +221,7 @@ export default function About() {
                     </svg>
                   </div>
                   <p className="relative z-10 text-xl font-medium text-white leading-relaxed italic">
-                    "Technology is not just about building software. It is about creating opportunities, solving real problems, and helping businesses grow with confidence."
+                    "Technology is not just about building software. It is about creating opportunities, solving real problems, and empowering businesses to grow with confidence."
                   </p>
                 </motion.div>
               </motion.div>

@@ -133,7 +133,7 @@ export default function FaqContact() {
                 </div>
                 <div>
                   <h4 className="font-heading font-semibold text-slate-900">Email Us</h4>
-                  <a href="mailto:info@devtechitsolution.com" className="text-slate-500 hover:text-primary transition-colors text-sm">info@devtechitsolution.com</a>
+                  <a href="mailto:support@devtechitsolution.com" className="text-slate-500 hover:text-primary transition-colors text-sm">support@devtechitsolution.com</a>
                 </div>
               </div>
               <div className="flex items-start gap-4">
