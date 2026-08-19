@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CURRENT_OPPORTUNITIES, Opportunity } from "@/lib/careers-data";
+import { Opportunity } from "@/lib/careers-data";
 import { Briefcase, MapPin, Clock, Award, ArrowUpRight, Search, CheckCircle } from "lucide-react";
 
 interface CurrentOpportunitiesProps {
@@ -10,7 +10,7 @@ interface CurrentOpportunitiesProps {
   opportunities?: Opportunity[];
 }
 
-export default function CurrentOpportunities({ onApply, opportunities = CURRENT_OPPORTUNITIES }: CurrentOpportunitiesProps) {
+export default function CurrentOpportunities({ onApply, opportunities = [] }: CurrentOpportunitiesProps) {
   const [activeTab, setActiveTab] = useState<"Job" | "Internship">("Job");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -201,14 +201,22 @@ export default function CurrentOpportunities({ onApply, opportunities = CURRENT_
               ))
             ) : (
               <div className="col-span-2 py-20 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-300">
-                <p className="text-xl font-bold text-slate-800 mb-2">No Openings Match Your Search</p>
-                <p className="text-sm text-slate-500 max-w-md mx-auto mb-6"> We couldn&apos;t find any open positions matching &quot;{searchQuery}&quot;. Try resetting your filters or check back soon!</p>
-                <button 
-                  onClick={() => setSearchQuery("")} 
-                  className="px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 transition-colors"
-                >
-                  Reset Search Filter
-                </button>
+                <p className="text-xl font-bold text-slate-800 mb-2">
+                  {searchQuery ? "No Openings Match Your Search" : `No Active ${activeTab} Openings Posted`}
+                </p>
+                <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
+                  {searchQuery 
+                    ? `We couldn't find any open positions matching "${searchQuery}". Try resetting your search filter.` 
+                    : `There are currently no ${activeTab.toLowerCase()} positions posted. Log in to the Admin Dashboard to post new job or internship opportunities.`}
+                </p>
+                {searchQuery && (
+                  <button 
+                    onClick={() => setSearchQuery("")} 
+                    className="px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 transition-colors"
+                  >
+                    Reset Search Filter
+                  </button>
+                )}
               </div>
             )}
           </motion.div>

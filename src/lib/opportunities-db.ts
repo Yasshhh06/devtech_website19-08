@@ -20,23 +20,13 @@ function getStoragePath(): string {
       fs.mkdirSync(DB_DIR, { recursive: true });
     }
     if (!fs.existsSync(DB_FILE)) {
-      const initialData: Opportunity[] = CURRENT_OPPORTUNITIES.map(op => ({
-        ...op,
-        status: "Active",
-        createdAt: new Date().toISOString()
-      }));
-      fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), "utf-8");
+      fs.writeFileSync(DB_FILE, JSON.stringify([], null, 2), "utf-8");
     }
     fs.accessSync(DB_FILE, fs.constants.W_OK);
     return DB_FILE;
   } catch {
     if (!fs.existsSync(TMP_FILE)) {
-      const initialData: Opportunity[] = CURRENT_OPPORTUNITIES.map(op => ({
-        ...op,
-        status: "Active",
-        createdAt: new Date().toISOString()
-      }));
-      fs.writeFileSync(TMP_FILE, JSON.stringify(initialData, null, 2), "utf-8");
+      fs.writeFileSync(TMP_FILE, JSON.stringify([], null, 2), "utf-8");
     }
     return TMP_FILE;
   }
@@ -58,31 +48,7 @@ export async function getOpportunities(): Promise<Opportunity[]> {
           id: data.id || docSnap.id
         });
       });
-      if (items.length > 0) {
-        return items;
-      }
-
-      // Check if storage file exists before auto-seeding
-      const filePath = path.join(process.cwd(), "data", "opportunities.json");
-      if (fs.existsSync(filePath)) {
-        return items; // User deleted all items or database is intentionally empty
-      }
-
-      // Seed initial opportunities to Firestore if collection is empty and file doesn't exist
-      console.log("🔥 [Firebase] Firestore collection 'opportunities' is empty. Auto-seeding initial openings...");
-      const seedItems: Opportunity[] = CURRENT_OPPORTUNITIES.map(op => ({
-        ...op,
-        status: "Active",
-        createdAt: new Date().toISOString()
-      }));
-      for (const item of seedItems) {
-        try {
-          await setDoc(doc(db, "opportunities", item.id), item);
-        } catch (sErr) {
-          console.warn(`Failed to seed ${item.id} to Firestore:`, sErr);
-        }
-      }
-      return seedItems;
+      return items;
     } catch (firebaseErr) {
       console.warn("⚠️ [Firebase Opportunities Warning] Error reading from Firestore:", firebaseErr);
     }
@@ -94,17 +60,13 @@ export async function getOpportunities(): Promise<Opportunity[]> {
     const content = fs.readFileSync(filePath, "utf-8");
     let items: Opportunity[] = JSON.parse(content);
     if (!Array.isArray(items)) {
-      items = CURRENT_OPPORTUNITIES.map(op => ({
-        ...op,
-        status: "Active",
-        createdAt: new Date().toISOString()
-      }));
-      fs.writeFileSync(filePath, JSON.stringify(items, null, 2), "utf-8");
+      items = [];
+      fs.writeFileSync(filePath, JSON.stringify([], null, 2), "utf-8");
     }
     return items;
   } catch (error) {
     console.error("[OpportunitiesDB] Error reading storage:", error);
-    return CURRENT_OPPORTUNITIES.map(op => ({ ...op, status: "Active" }));
+    return [];
   }
 }
 

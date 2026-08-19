@@ -10,11 +10,11 @@ import HiringProcess from "@/components/careers/HiringProcess";
 import CurrentOpportunities from "@/components/careers/CurrentOpportunities";
 import EmployeeBenefits from "@/components/careers/EmployeeBenefits";
 import CareersFAQ from "@/components/careers/CareersFAQ";
-import { Opportunity, CURRENT_OPPORTUNITIES } from "@/lib/careers-data";
+import { Opportunity } from "@/lib/careers-data";
 
 export default function CareersPage() {
   const router = useRouter();
-  const [opportunities, setOpportunities] = useState<Opportunity[]>(CURRENT_OPPORTUNITIES);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
 
   useEffect(() => {
     // Dynamically fetch persistent opportunities if storage exists

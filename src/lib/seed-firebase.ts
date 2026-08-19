@@ -11,26 +11,7 @@ export async function seedFirebaseCollections() {
   try {
     console.log("🔥 Starting Firebase Firestore Data Seeding...");
 
-    // 1. Seed Opportunities Collection (only on initial setup)
-    const oppsCol = collection(db, "opportunities");
-    const oppsSnap = await getDocs(oppsCol);
-    if (oppsSnap.empty) {
-      const fs = await import("fs");
-      const path = await import("path");
-      const dbFile = path.join(process.cwd(), "data", "opportunities.json");
-      if (!fs.existsSync(dbFile)) {
-        for (const opp of CURRENT_OPPORTUNITIES) {
-          const record = {
-            ...opp,
-            status: "Active",
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          };
-          await setDoc(doc(db, "opportunities", opp.id), record);
-          console.log(`✓ Seeded Opportunity: ${opp.id} (${opp.title})`);
-        }
-      }
-    }
+    // 1. Opportunities are managed exclusively via Admin Portal (no auto-seeding)
 
     // 2. Seed Sample Candidate Application Dossier
     const sampleApplication = {

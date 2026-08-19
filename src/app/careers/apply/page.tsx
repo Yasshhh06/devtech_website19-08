@@ -6,28 +6,43 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ApplicationForm from "@/components/careers/ApplicationForm";
 import SuccessMessage from "@/components/careers/SuccessMessage";
-import { CURRENT_OPPORTUNITIES } from "@/lib/careers-data";
+
 import { 
   ArrowLeft, Briefcase, MapPin, Clock, Award, ShieldCheck, 
   Sparkles, Mail, Phone, HelpCircle, Zap, Lock, Users 
 } from "lucide-react";
+
+import { Opportunity } from "@/lib/careers-data";
+import { useEffect } from "react";
 
 function ApplicationContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [recordId, setRecordId] = useState<string | undefined>(undefined);
+  const [matchingOp, setMatchingOp] = useState<Opportunity | null>(null);
 
   const roleParam = searchParams.get("role") || "";
   const typeParam = (searchParams.get("type") as "Job" | "Internship") || 
     (roleParam.toLowerCase().includes("intern") ? "Internship" : "Job");
 
-  // Lookup opportunity details if matched
-  const matchingOp = CURRENT_OPPORTUNITIES.find(
-    op => op.title.toLowerCase() === roleParam.toLowerCase() || op.slug === roleParam.toLowerCase()
-  );
+  useEffect(() => {
+    if (roleParam) {
+      fetch("/api/opportunities")
+        .then(res => res.json())
+        .then((data: Opportunity[]) => {
+          if (Array.isArray(data)) {
+            const found = data.find(
+              op => op.title.toLowerCase() === roleParam.toLowerCase() || op.slug === roleParam.toLowerCase()
+            );
+            if (found) setMatchingOp(found);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [roleParam]);
 
-  const formattedRole = matchingOp ? matchingOp.title : roleParam.replace(/-/g, " ");
+  const formattedRole = matchingOp ? matchingOp.title : (roleParam ? roleParam.replace(/-/g, " ") : "");
 
   return (
     <>
