@@ -71,7 +71,7 @@ export default function ApplicationModal({ isOpen, onClose, initialType = "Job",
             </div>
 
             {/* Modal Content Area */}
-            <div className="p-6 sm:p-10 bg-white max-h-[85vh] overflow-y-auto">
+            <div className="p-4 sm:p-10 bg-white max-h-[85vh] overflow-y-auto">
               {isSubmitted ? (
                 <SuccessMessage 
                   onBack={handleClose} 

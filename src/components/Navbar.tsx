@@ -70,9 +70,9 @@ export default function Navbar() {
         }`}
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      transition={{ duration: 0.6, ease: "easeOut", delay: 2.2 }} // Delay to sync with page loader
+      transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 }}
     >
-      <div className="w-full max-w-[1280px] mx-auto px-8 flex items-center justify-between h-full">
+      <div className="w-full max-w-[1280px] mx-auto px-4 sm:px-8 flex items-center justify-between h-full">
         {/* Logo */}
         <Link
           href="/"
