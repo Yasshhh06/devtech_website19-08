@@ -52,7 +52,11 @@ export async function getOpportunities(): Promise<Opportunity[]> {
       const snapshot = await getDocs(colRef);
       const items: Opportunity[] = [];
       snapshot.forEach(docSnap => {
-        items.push(docSnap.data() as Opportunity);
+        const data = docSnap.data() as Opportunity;
+        items.push({
+          ...data,
+          id: data.id || docSnap.id
+        });
       });
       if (items.length > 0) {
         return items;
@@ -186,9 +190,10 @@ export async function saveOpportunity(data: Partial<Opportunity>): Promise<{ suc
  */
 export async function toggleOpportunityStatus(id: string): Promise<{ success: boolean; newStatus?: string }> {
   const all = await getOpportunities();
-  const index = all.findIndex(o => o.id === id);
+  const index = all.findIndex(o => o.id === id || o.slug === id);
   if (index === -1) return { success: false };
 
+  const targetId = all[index].id || id;
   const currentStatus = all[index].status || "Active";
   const newStatus = currentStatus === "Active" ? "Closed" : "Active";
   all[index].status = newStatus;
@@ -196,15 +201,19 @@ export async function toggleOpportunityStatus(id: string): Promise<{ success: bo
 
   if (db && isFirebaseConfigured()) {
     try {
-      const docRef = doc(db, "opportunities", id);
+      const docRef = doc(db, "opportunities", targetId);
       await setDoc(docRef, { status: newStatus, updatedAt: all[index].updatedAt }, { merge: true });
     } catch (err) {
       console.warn("⚠️ [Firebase] Failed to toggle opportunity in Firestore:", err);
     }
   }
 
-  const filePath = getStoragePath();
-  fs.writeFileSync(filePath, JSON.stringify(all, null, 2), "utf-8");
+  try {
+    const filePath = getStoragePath();
+    fs.writeFileSync(filePath, JSON.stringify(all, null, 2), "utf-8");
+  } catch (err) {
+    console.warn("[OpportunitiesDB] Storage file write error:", err);
+  }
   return { success: true, newStatus };
 }
 
@@ -213,19 +222,30 @@ export async function toggleOpportunityStatus(id: string): Promise<{ success: bo
  */
 export async function deleteOpportunity(id: string): Promise<{ success: boolean }> {
   const all = await getOpportunities();
-  const filtered = all.filter(o => o.id !== id);
-  if (filtered.length === all.length) return { success: false };
+  const targetDoc = all.find(o => o.id === id || o.slug === id);
+  const targetId = targetDoc ? targetDoc.id : id;
+
+  const filtered = all.filter(o => o.id !== targetId && o.slug !== targetId && o.id !== id);
 
   if (db && isFirebaseConfigured()) {
     try {
-      const docRef = doc(db, "opportunities", id);
+      const docRef = doc(db, "opportunities", targetId);
       await deleteDoc(docRef);
+      if (targetId !== id) {
+        await deleteDoc(doc(db, "opportunities", id));
+      }
+      console.log(`🔥 [Firebase] Deleted opportunity from Firestore: ${targetId}`);
     } catch (err) {
       console.warn("⚠️ [Firebase] Failed to delete opportunity from Firestore:", err);
     }
   }
 
-  const filePath = getStoragePath();
-  fs.writeFileSync(filePath, JSON.stringify(filtered, null, 2), "utf-8");
+  try {
+    const filePath = getStoragePath();
+    fs.writeFileSync(filePath, JSON.stringify(filtered, null, 2), "utf-8");
+  } catch (err) {
+    console.warn("[OpportunitiesDB] Storage file write error:", err);
+  }
+
   return { success: true };
 }

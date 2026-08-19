@@ -120,9 +120,11 @@ export async function saveOpportunityAction(formData: FormData) {
       status
     });
 
+    revalidatePath("/", "layout");
     revalidatePath("/careers");
     revalidatePath("/careers/apply");
     revalidatePath("/admin");
+    revalidatePath("/api/opportunities");
 
     return { success: true, opportunity: res.opportunity };
   } catch (err: any) {
@@ -138,9 +140,11 @@ export async function toggleOpportunityStatusAction(id: string) {
   try {
     const res = await toggleOpportunityStatus(id);
     if (res.success) {
+      revalidatePath("/", "layout");
       revalidatePath("/careers");
       revalidatePath("/careers/apply");
       revalidatePath("/admin");
+      revalidatePath("/api/opportunities");
     }
     return res;
   } catch (err) {
@@ -156,9 +160,11 @@ export async function deleteOpportunityAction(id: string) {
   try {
     const res = await deleteOpportunity(id);
     if (res.success) {
+      revalidatePath("/", "layout");
       revalidatePath("/careers");
       revalidatePath("/careers/apply");
       revalidatePath("/admin");
+      revalidatePath("/api/opportunities");
     }
     return res;
   } catch (err) {
