@@ -23,7 +23,7 @@ const contactSchema = z.object({
   lastName: z.string().min(2, "Last name is required").max(50),
   email: z.string().email("Valid email is required").max(100),
   message: z.string().min(10, "Message must be at least 10 characters").max(2000),
-  honeypot: z.string().max(0), 
+  honeypot: z.string().max(0),
 });
 
 type ContactFormValues = z.infer<typeof contactSchema>;
@@ -82,7 +82,7 @@ export default function FaqContact() {
     <section className="py-24 bg-slate-50" id="contact">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-          
+
           {/* FAQ Section */}
           <div>
             <motion.div
@@ -120,7 +120,7 @@ export default function FaqContact() {
               </Accordion>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-100px" }}
@@ -157,7 +157,7 @@ export default function FaqContact() {
           >
             <div className="bg-white rounded-3xl p-8 md:p-10 shadow-xl border border-slate-100 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-[50px]"></div>
-              
+
               <h3 className="text-2xl font-heading font-bold text-slate-900 mb-2">Ready to Innovate?</h3>
               <p className="text-slate-500 mb-8">Fill out the form below and our technical experts will get back to you within 24 hours.</p>
 
@@ -168,46 +168,46 @@ export default function FaqContact() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-slate-700">First Name</label>
-                    <Input 
+                    <Input
                       {...register("firstName")}
-                      placeholder="John" 
-                      className={`h-12 bg-slate-50 border-slate-200 focus-visible:ring-primary ${errors.firstName ? 'border-red-500 focus-visible:ring-red-500' : ''}`} 
+                      placeholder="John"
+                      className={`h-12 bg-slate-50 border-slate-200 focus-visible:ring-primary ${errors.firstName ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                     />
                     {errors.firstName && <p className="text-xs text-red-500">{errors.firstName.message}</p>}
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-slate-700">Last Name</label>
-                    <Input 
+                    <Input
                       {...register("lastName")}
-                      placeholder="Doe" 
-                      className={`h-12 bg-slate-50 border-slate-200 focus-visible:ring-primary ${errors.lastName ? 'border-red-500 focus-visible:ring-red-500' : ''}`} 
+                      placeholder="Doe"
+                      className={`h-12 bg-slate-50 border-slate-200 focus-visible:ring-primary ${errors.lastName ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                     />
                     {errors.lastName && <p className="text-xs text-red-500">{errors.lastName.message}</p>}
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">Work Email</label>
-                  <Input 
+                  <Input
                     {...register("email")}
-                    type="email" 
-                    placeholder="john@company.com" 
-                    className={`h-12 bg-slate-50 border-slate-200 focus-visible:ring-primary ${errors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`} 
+                    type="email"
+                    placeholder="john@company.com"
+                    className={`h-12 bg-slate-50 border-slate-200 focus-visible:ring-primary ${errors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   />
                   {errors.email && <p className="text-xs text-red-500">{errors.email.message}</p>}
                 </div>
-                
+
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700">Project Details</label>
-                  <Textarea 
+                  <Textarea
                     {...register("message")}
-                    placeholder="Tell us about your project requirements..." 
-                    className={`min-h-[120px] bg-slate-50 border-slate-200 focus-visible:ring-primary resize-none ${errors.message ? 'border-red-500 focus-visible:ring-red-500' : ''}`} 
+                    placeholder="Tell us about your project requirements..."
+                    className={`min-h-[120px] bg-slate-50 border-slate-200 focus-visible:ring-primary resize-none ${errors.message ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                   />
                   {errors.message && <p className="text-xs text-red-500">{errors.message.message}</p>}
                 </div>
-                
-                <Button 
+
+                <Button
                   type="submit"
                   disabled={isSubmitting}
                   className="w-full h-12 rounded-lg text-base font-semibold shadow-md hover:shadow-lg transition-all mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
@@ -221,7 +221,7 @@ export default function FaqContact() {
                     "Send Message"
                   )}
                 </Button>
-                
+
                 <p className="text-xs text-center text-slate-400 mt-4">
                   By submitting this form, you agree to our privacy policy and terms of service.
                 </p>

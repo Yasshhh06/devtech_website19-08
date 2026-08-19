@@ -200,23 +200,37 @@ export default function CurrentOpportunities({ onApply, opportunities = [] }: Cu
                 </motion.div>
               ))
             ) : (
-              <div className="col-span-2 py-20 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-300">
-                <p className="text-xl font-bold text-slate-800 mb-2">
-                  {searchQuery ? "No Openings Match Your Search" : `No Active ${activeTab} Openings Posted`}
-                </p>
-                <p className="text-sm text-slate-500 max-w-md mx-auto mb-6">
+              <div className="col-span-2 py-16 px-6 text-center bg-slate-50 rounded-3xl border border-dashed border-slate-300 relative overflow-hidden">
+                <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center mx-auto mb-5 shadow-sm">
+                  <Briefcase className="w-8 h-8" />
+                </div>
+                <h3 className="text-2xl font-heading font-extrabold text-slate-900 mb-2">
+                  {searchQuery ? "No Openings Match Your Search" : "New Opportunities & Internships Launching Soon"}
+                </h3>
+                <p className="text-slate-600 text-sm sm:text-base max-w-lg mx-auto mb-6 leading-relaxed">
                   {searchQuery 
-                    ? `We couldn't find any open positions matching "${searchQuery}". Try resetting your search filter.` 
-                    : `There are currently no ${activeTab.toLowerCase()} positions posted. Log in to the Admin Dashboard to post new job or internship opportunities.`}
+                    ? `We couldn't find any positions matching "${searchQuery}". Try clearing your search.` 
+                    : `We are currently preparing new career positions and internship programs. You can express your interest now by submitting your resume to our talent database!`}
                 </p>
-                {searchQuery && (
-                  <button 
-                    onClick={() => setSearchQuery("")} 
-                    className="px-6 py-2.5 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 transition-colors"
-                  >
-                    Reset Search Filter
-                  </button>
-                )}
+
+                <div className="flex flex-wrap items-center justify-center gap-4">
+                  {searchQuery ? (
+                    <button 
+                      onClick={() => setSearchQuery("")} 
+                      className="px-6 py-3 rounded-xl bg-blue-600 text-white font-heading font-bold text-sm hover:bg-blue-700 transition-all shadow-md cursor-pointer"
+                    >
+                      Reset Search Filter
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={() => onApply(activeTab, `General Application (${activeTab})`)} 
+                      className="px-7 py-3 rounded-xl bg-blue-600 text-white font-heading font-bold text-sm hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 flex items-center gap-2 cursor-pointer"
+                    >
+                      <span>Submit Resume for Future Openings</span>
+                      <ArrowUpRight className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </motion.div>

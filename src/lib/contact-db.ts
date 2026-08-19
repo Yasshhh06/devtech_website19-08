@@ -77,12 +77,15 @@ export async function getContactInquiries(): Promise<ContactInquiryRecord[]> {
   if (db && isFirebaseConfigured()) {
     try {
       const colRef = collection(db, "contact_inquiries");
-      const q = query(colRef, orderBy("submittedAt", "desc"));
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocs(colRef);
       const list: ContactInquiryRecord[] = [];
       snapshot.forEach(docSnap => {
-        list.push(docSnap.data() as ContactInquiryRecord);
+        const data = docSnap.data() as ContactInquiryRecord;
+        if (data && data.id) {
+          list.push(data);
+        }
       });
+      list.sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
       if (list.length > 0) {
         return list;
       }

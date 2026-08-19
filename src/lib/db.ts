@@ -132,17 +132,20 @@ export async function getCareerApplications(): Promise<ApplicationRecord[]> {
   if (db && isFirebaseConfigured()) {
     try {
       const colRef = collection(db, "career_applications");
-      const q = query(colRef, orderBy("submittedAt", "desc"));
-      const snapshot = await getDocs(q);
+      const snapshot = await getDocs(colRef);
       const list: ApplicationRecord[] = [];
       snapshot.forEach(docSnap => {
-        list.push(docSnap.data() as ApplicationRecord);
+        const data = docSnap.data() as ApplicationRecord;
+        if (data && data.id) {
+          list.push(data);
+        }
       });
+      list.sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
       if (list.length > 0) {
         return list;
       }
     } catch (firebaseErr) {
-      console.warn("⚠️ [Firebase Firestore Warning] Failed to read from Firestore, using local fallback:", firebaseErr);
+      console.warn("⚠️ [Firebase Firestore Warning] Failed to read applications from Firestore:", firebaseErr);
     }
   }
 

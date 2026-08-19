@@ -18,7 +18,7 @@ export default function Process() {
     <section className="py-24 bg-white" id="process">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-20">
-          <motion.h2 
+          <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
@@ -27,7 +27,7 @@ export default function Process() {
           >
             Our Proven <span className="text-primary">Process</span>
           </motion.h2>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-100px" }}
@@ -41,7 +41,7 @@ export default function Process() {
         <div className="relative">
           {/* Connecting Line */}
           <div className="hidden lg:block absolute top-8 left-[7%] w-[86%] h-[2px] bg-slate-100 z-0"></div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-8 relative z-10">
             {steps.map((step, index) => (
               <motion.div
