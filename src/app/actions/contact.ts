@@ -3,8 +3,9 @@
 import { z } from "zod";
 import { Resend } from "resend";
 import { headers } from "next/headers";
+import { saveContactInquiry } from "@/lib/contact-db";
 
-const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy");
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Rate Limiting Setup
 // Using a global map to track requests per IP.
@@ -72,6 +73,20 @@ export async function submitContactForm(data: ContactFormData) {
       timeStyle: "long" 
     });
 
+    // Save contact inquiry to Firebase & DB
+    const inquiryId = `INQ-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+    await saveContactInquiry({
+      id: inquiryId,
+      submittedAt: new Date().toISOString(),
+      firstName,
+      lastName,
+      email,
+      message,
+      ip,
+      userAgent,
+      status: "New"
+    });
+
     // 5. Build HTML Email Template
     const htmlEmail = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
@@ -109,8 +124,8 @@ export async function submitContactForm(data: ContactFormData) {
     // 6. Send Email using Resend
     if (process.env.RESEND_API_KEY) {
       const { error } = await resend.emails.send({
-        from: "DevTech Website <onboarding@resend.dev>", // Needs verified domain in prod, onboarding@resend.dev works for testing to your own email
-        to: "support@devtechitsolution.com",
+        from: process.env.RESEND_FROM_EMAIL || "DevTech Website <onboarding@resend.dev>",
+        to: "hiring@devtechitsolution.com",
         replyTo: email,
         subject: "New Business Inquiry – DevTech IT Solution",
         html: htmlEmail,

@@ -2,15 +2,27 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion, useScroll, useMotionValueEvent } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { scrollToElement } from "@/lib/utils";
 
+const NAV_ITEMS = [
+  { name: "Home", hash: "#home", path: "/" },
+  { name: "Services", hash: "#services", path: "/#services" },
+  { name: "Solutions", hash: "#solutions", path: "/#solutions" },
+  { name: "About", hash: "#about", path: "/#about" },
+  { name: "Careers", hash: "", path: "/careers" },
+];
+
 export default function Navbar() {
   const { scrollY } = useScroll();
+  const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("Home");
+
+  const isHome = pathname === "/";
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     if (latest > 60) {
@@ -20,25 +32,35 @@ export default function Navbar() {
     }
   });
 
-  // Track active section via hash changes
+  // Track active section via hash changes or route inspection
   useEffect(() => {
+    const timer = setTimeout(() => {
+      if (pathname && pathname.startsWith("/careers")) {
+        setActiveSection("Careers");
+        return;
+      }
+      const hash = window.location.hash || "#home";
+      const match = NAV_ITEMS.find((item) => item.hash === hash);
+      if (match) setActiveSection(match.name);
+    }, 0);
+
     const handleHashChange = () => {
       const hash = window.location.hash || "#home";
-      const link = links.find((l) => l.href === hash);
-      if (link) setActiveSection(link.name);
+      const match = NAV_ITEMS.find((item) => item.hash === hash);
+      if (match) setActiveSection(match.name);
     };
-    window.addEventListener("hashchange", handleHashChange);
-    return () => window.removeEventListener("hashchange", handleHashChange);
-  }, []);
 
-  const links = [
-    { name: "Home", href: "#home" },
-    { name: "Services", href: "#services" },
-    { name: "Solutions", href: "#solutions" },
-    { name: "Portfolio", href: "#portfolio" },
-    { name: "About", href: "#about" },
-    { name: "Pricing", href: "#pricing" },
-  ];
+    window.addEventListener("hashchange", handleHashChange);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("hashchange", handleHashChange);
+    };
+  }, [pathname]);
+
+  const links = NAV_ITEMS.map((item) => ({
+    name: item.name,
+    href: item.name === "Careers" ? item.path : isHome ? item.hash : item.path,
+  }));
 
   return (
     <motion.header
@@ -69,11 +91,11 @@ export default function Navbar() {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden lg:flex items-center gap-2 h-full">
+        <nav className="hidden lg:flex items-center gap-1 xl:gap-2 h-full">
           {links.map((link) => {
             const isActive = activeSection === link.name;
             return (
-              <div key={link.name} className="relative h-full flex items-center px-4">
+              <div key={link.name} className="relative h-full flex items-center px-3 xl:px-4">
                 <Link
                   href={link.href}
                   onClick={() => setActiveSection(link.name)}
@@ -86,11 +108,11 @@ export default function Navbar() {
                 >
                   {/* Hover Lift Animation wrapper */}
                   <motion.span
-                    className="inline-block relative z-10"
+                    className="inline-flex items-center gap-1.5 relative z-10"
                     whileHover={{ y: -2 }}
                     transition={{ type: "spring", stiffness: 400, damping: 17 }}
                   >
-                    {link.name}
+                    <span>{link.name}</span>
 
                     {/* Standard Hover Underline (Hidden when active) */}
                     {!isActive && (
@@ -115,7 +137,7 @@ export default function Navbar() {
         {/* Desktop CTA Button */}
         <div className="hidden lg:flex items-center gap-4">
           <motion.button
-            onClick={() => scrollToElement("pricing")}
+            onClick={() => scrollToElement("contact")}
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.98 }}
             transition={{ type: "spring", stiffness: 400, damping: 17 }}
@@ -164,7 +186,7 @@ export default function Navbar() {
                 setMobileMenuOpen(false);
               }}
             >
-              {link.name}
+              <span>{link.name}</span>
               {activeSection === link.name && (
                 <motion.div
                   layoutId="mobileActive"
@@ -175,7 +197,7 @@ export default function Navbar() {
           ))}
           <motion.button
             onClick={() => {
-              scrollToElement("pricing");
+              scrollToElement("contact");
               setMobileMenuOpen(false);
             }}
             whileTap={{ scale: 0.98 }}

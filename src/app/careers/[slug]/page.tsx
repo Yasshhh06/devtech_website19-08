@@ -193,7 +193,7 @@ export default function JobDetailsPage({ params }: { params: Promise<{ slug: str
                         </div>
                         <div className="mt-1">
                           <span className="block mb-0.5">Send your resume to:</span>
-                          <a href="mailto:careers@devtechitsolution.com" className="font-semibold text-primary hover:underline">careers@devtechitsolution.com</a>
+                          <a href="mailto:hiring@devtechitsolution.com" className="font-semibold text-primary hover:underline">hiring@devtechitsolution.com</a>
                         </div>
                       </li>
                     </ul>

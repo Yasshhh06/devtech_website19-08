@@ -76,9 +76,9 @@ export default function Hero() {
               </Button>
             </motion.div>
             <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} transition={{ type: "spring", stiffness: 400, damping: 17 }} className="w-full sm:w-auto">
-              <Button onClick={() => scrollToElement("portfolio")} size="lg" variant="outline" className="w-full sm:w-auto cursor-pointer text-base h-14 px-8 rounded-full border-white/20 text-white bg-black/20 hover:bg-white/10 hover:text-white backdrop-blur-md group">
+              <Button onClick={() => scrollToElement("services")} size="lg" variant="outline" className="w-full sm:w-auto cursor-pointer text-base h-14 px-8 rounded-full border-white/20 text-white bg-black/20 hover:bg-white/10 hover:text-white backdrop-blur-md group">
                 <PlayCircle className="mr-2 w-5 h-5 text-white/80 group-hover:text-white transition-colors" />
-                View Our Work
+                Explore Services
               </Button>
             </motion.div>
           </motion.div>
