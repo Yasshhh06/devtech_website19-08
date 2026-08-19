@@ -75,14 +75,6 @@ export async function getAdminDashboardDataAction() {
     let applications = await getCareerApplications();
     let inquiries = await getContactInquiries();
 
-    // Auto-seed Firebase Firestore if applications or inquiries are empty
-    if (applications.length === 0 || inquiries.length === 0) {
-      await seedFirebaseCollections();
-      opportunities = await getOpportunities();
-      applications = await getCareerApplications();
-      inquiries = await getContactInquiries();
-    }
-
     return { success: true, opportunities, applications, inquiries };
   } catch (err) {
     console.error("[AdminAction] getAdminDashboardData error:", err);
