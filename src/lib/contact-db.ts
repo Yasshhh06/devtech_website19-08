@@ -43,8 +43,9 @@ function getStoragePath(): string {
 export async function saveContactInquiry(record: ContactInquiryRecord): Promise<{ success: boolean; id: string }> {
   if (db && isFirebaseConfigured()) {
     try {
+      const cleanRecord = JSON.parse(JSON.stringify(record));
       const docRef = doc(db, "contact_inquiries", record.id);
-      await setDoc(docRef, record);
+      await setDoc(docRef, cleanRecord);
       console.log(`🔥 [Firebase Firestore] Saved contact inquiry: ${record.id}`);
     } catch (firebaseErr) {
       console.warn("⚠️ [Firebase] Failed to write contact inquiry to Firestore:", firebaseErr);
@@ -74,32 +75,40 @@ export async function saveContactInquiry(record: ContactInquiryRecord): Promise<
  * Read client contact form inquiries from Firestore or local fallback
  */
 export async function getContactInquiries(): Promise<ContactInquiryRecord[]> {
+  const map = new Map<string, ContactInquiryRecord>();
+
+  // 1. Read local storage inquiries first
+  try {
+    const file = getStoragePath();
+    if (fs.existsSync(file)) {
+      const localList: ContactInquiryRecord[] = JSON.parse(fs.readFileSync(file, "utf-8"));
+      if (Array.isArray(localList)) {
+        localList.forEach(item => {
+          if (item && item.id) map.set(item.id, item);
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[ContactDB] Error reading local inquiries:", err);
+  }
+
+  // 2. Read Firebase Firestore inquiries and merge
   if (db && isFirebaseConfigured()) {
     try {
       const colRef = collection(db, "contact_inquiries");
       const snapshot = await getDocs(colRef);
-      const list: ContactInquiryRecord[] = [];
       snapshot.forEach(docSnap => {
         const data = docSnap.data() as ContactInquiryRecord;
         if (data && data.id) {
-          list.push(data);
+          map.set(data.id, data);
         }
       });
-      list.sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
-      if (list.length > 0) {
-        return list;
-      }
     } catch (firebaseErr) {
       console.warn("⚠️ [Firebase] Failed to read contact inquiries from Firestore:", firebaseErr);
     }
   }
 
-  try {
-    const file = getStoragePath();
-    if (!fs.existsSync(file)) return [];
-    return JSON.parse(fs.readFileSync(file, "utf-8"));
-  } catch (error) {
-    console.error("[ContactDB] Error reading inquiries:", error);
-    return [];
-  }
+  const result = Array.from(map.values());
+  result.sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
+  return result;
 }

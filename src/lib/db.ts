@@ -95,11 +95,12 @@ export async function saveCareerApplication(record: ApplicationRecord): Promise<
   // 1. Try Firestore save if Firebase is configured
   if (db && isFirebaseConfigured()) {
     try {
+      const cleanRecord = JSON.parse(JSON.stringify(record));
       const docRef = doc(db, "career_applications", record.id);
-      await setDoc(docRef, record);
+      await setDoc(docRef, cleanRecord);
       console.log(`🔥 [Firebase Firestore] Successfully saved application record: ${record.id}`);
     } catch (firebaseErr) {
-      console.warn("⚠️ [Firebase Firestore Warning] Failed to write to Firestore, falling back to local file:", firebaseErr);
+      console.warn("⚠️ [Firebase Firestore Warning] Failed to write to Firestore:", firebaseErr);
     }
   }
 
@@ -129,33 +130,40 @@ export async function saveCareerApplication(record: ApplicationRecord): Promise<
  * Reads candidate application records from Firebase Firestore (if configured) or local storage
  */
 export async function getCareerApplications(): Promise<ApplicationRecord[]> {
+  const map = new Map<string, ApplicationRecord>();
+
+  // 1. Read local storage records first
+  try {
+    const file = getStoragePath();
+    if (fs.existsSync(file)) {
+      const localList: ApplicationRecord[] = JSON.parse(fs.readFileSync(file, "utf-8"));
+      if (Array.isArray(localList)) {
+        localList.forEach(item => {
+          if (item && item.id) map.set(item.id, item);
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[Database] Error reading local applications:", err);
+  }
+
+  // 2. Read Firebase Firestore records and merge
   if (db && isFirebaseConfigured()) {
     try {
       const colRef = collection(db, "career_applications");
       const snapshot = await getDocs(colRef);
-      const list: ApplicationRecord[] = [];
       snapshot.forEach(docSnap => {
         const data = docSnap.data() as ApplicationRecord;
         if (data && data.id) {
-          list.push(data);
+          map.set(data.id, data);
         }
       });
-      list.sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
-      if (list.length > 0) {
-        return list;
-      }
     } catch (firebaseErr) {
       console.warn("⚠️ [Firebase Firestore Warning] Failed to read applications from Firestore:", firebaseErr);
     }
   }
 
-  // Fallback to local file storage
-  try {
-    const file = getStoragePath();
-    if (!fs.existsSync(file)) return [];
-    return JSON.parse(fs.readFileSync(file, "utf-8"));
-  } catch (error) {
-    console.error("[Database] Error reading applications:", error);
-    return [];
-  }
+  const result = Array.from(map.values());
+  result.sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
+  return result;
 }
