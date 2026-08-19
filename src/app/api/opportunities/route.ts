@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getActiveOpportunities } from "@/lib/opportunities-db";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   try {
     const opps = await getActiveOpportunities();
@@ -10,3 +13,4 @@ export async function GET() {
     return NextResponse.json([], { status: 500 });
   }
 }
+

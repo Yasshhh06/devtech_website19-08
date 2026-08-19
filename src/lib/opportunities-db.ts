@@ -58,7 +58,13 @@ export async function getOpportunities(): Promise<Opportunity[]> {
         return items;
       }
 
-      // Seed initial opportunities to Firestore if collection is empty
+      // Check if storage file exists before auto-seeding
+      const filePath = path.join(process.cwd(), "data", "opportunities.json");
+      if (fs.existsSync(filePath)) {
+        return items; // User deleted all items or database is intentionally empty
+      }
+
+      // Seed initial opportunities to Firestore if collection is empty and file doesn't exist
       console.log("🔥 [Firebase] Firestore collection 'opportunities' is empty. Auto-seeding initial openings...");
       const seedItems: Opportunity[] = CURRENT_OPPORTUNITIES.map(op => ({
         ...op,
@@ -83,7 +89,7 @@ export async function getOpportunities(): Promise<Opportunity[]> {
     const filePath = getStoragePath();
     const content = fs.readFileSync(filePath, "utf-8");
     let items: Opportunity[] = JSON.parse(content);
-    if (!Array.isArray(items) || items.length === 0) {
+    if (!Array.isArray(items)) {
       items = CURRENT_OPPORTUNITIES.map(op => ({
         ...op,
         status: "Active",
