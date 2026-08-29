@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Opportunity } from "@/lib/careers-data";
-import { Briefcase, MapPin, Clock, Award, ArrowUpRight, Search, CheckCircle } from "lucide-react";
+import { Briefcase, MapPin, Clock, Award, ArrowUpRight, Search, CheckCircle, FileUp, Sparkles } from "lucide-react";
 
 interface CurrentOpportunitiesProps {
   onApply: (type: "Job" | "Internship", position?: string) => void;
@@ -30,7 +30,7 @@ export default function CurrentOpportunities({ onApply, opportunities = [] }: Cu
       <div className="container mx-auto px-4 lg:px-8 max-w-7xl">
         
         {/* Section Title */}
-        <div className="text-center max-w-3xl mx-auto mb-14">
+        <div className="text-center max-w-3xl mx-auto mb-12">
           <motion.div 
             className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-primary/10 text-primary font-semibold text-xs uppercase tracking-wider mb-4 border border-primary/20"
             initial={{ opacity: 0, y: 15 }}
@@ -56,9 +56,52 @@ export default function CurrentOpportunities({ onApply, opportunities = [] }: Cu
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.2 }}
           >
-            We are constantly expanding our digital horizons. Browse our current open positions and take your first step toward building impactful solutions with DevTech.
+            We are constantly expanding our digital horizons. Browse our current open positions or submit your resume for future opportunities.
           </motion.p>
         </div>
+
+        {/* TOP FEATURED BANNER: Submit Resume for Future Openings */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="mb-14 p-7 md:p-9 rounded-3xl bg-gradient-to-r from-[#0b1329] via-[#111c3a] to-[#0b1329] text-white border border-slate-700/60 shadow-xl relative overflow-hidden flex flex-col lg:flex-row items-center justify-between gap-6"
+        >
+          <div className="absolute -right-16 -top-16 w-64 h-64 bg-primary/20 rounded-full blur-3xl pointer-events-none"></div>
+          <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-indigo-500/15 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div className="space-y-3 text-center lg:text-left relative z-10 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-400/15 text-cyan-300 text-xs font-bold uppercase tracking-wider border border-cyan-400/30">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-300 animate-pulse" />
+              <span>Future Openings & General Talent Pool</span>
+            </div>
+            <h3 className="text-2xl md:text-3xl font-heading font-extrabold text-white tracking-tight">
+              Submit Resume for Future Openings
+            </h3>
+            <p className="text-slate-300 text-sm md:text-base leading-relaxed font-normal">
+              Don&apos;t see your specific role listed? Upload your profile into our priority database. Our recruitment team regularly evaluates candidates for new projects and upcoming roles!
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 w-full lg:w-auto shrink-0 relative z-10">
+            <button
+              onClick={() => onApply("Job", "General Application (Future Openings)")}
+              className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-heading font-bold text-sm shadow-md shadow-blue-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <FileUp className="w-4 h-4 text-cyan-300" />
+              <span>Submit Resume (Job)</span>
+            </button>
+
+            <button
+              onClick={() => onApply("Internship", "General Internship (Future Openings)")}
+              className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 font-heading font-bold text-sm backdrop-blur-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Award className="w-4 h-4 text-indigo-300" />
+              <span>Submit Resume (Intern)</span>
+            </button>
+          </div>
+        </motion.div>
 
         {/* Tab Switcher & Search Bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 pb-6 border-b border-slate-200">

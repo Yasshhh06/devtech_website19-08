@@ -2,13 +2,13 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Briefcase, Sparkles, ShieldCheck, Code, Terminal, Zap, ArrowDown } from "lucide-react";
+import { Briefcase, Sparkles, ShieldCheck, Code, Terminal, Zap, ArrowDown, FileUp } from "lucide-react";
 
 interface CareersHeroProps {
   onApply?: (type: "Job" | "Internship", position?: string) => void;
 }
 
-export default function CareersHero({}: CareersHeroProps) {
+export default function CareersHero({ onApply }: CareersHeroProps) {
   const handleScrollToOpportunities = () => {
     const el = document.getElementById("open-positions");
     if (el) {
@@ -60,17 +60,27 @@ export default function CareersHero({}: CareersHeroProps) {
               Join our team of passionate developers, designers, cybersecurity professionals, and innovators. Whether you&apos;re an experienced professional or a student looking for an internship, we provide opportunities to learn, grow, and build impactful digital solutions.
             </p>
 
-            {/* Single Prominent CTA Button */}
-            <div className="flex items-center gap-4 pt-2">
+            {/* CTA Buttons */}
+            <div className="flex flex-wrap items-center gap-4 pt-2">
               <motion.button
                 whileHover={{ scale: 1.03, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleScrollToOpportunities}
-                className="inline-flex items-center justify-center gap-3.5 px-9 py-4.5 rounded-2xl bg-gradient-to-r from-blue-600 via-primary to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-heading font-bold text-base md:text-lg shadow-[0_10px_35px_rgba(37,99,235,0.45)] border border-blue-400/30 transition-all duration-300 cursor-pointer group/cta"
+                className="inline-flex items-center justify-center gap-3 px-7 py-4 rounded-2xl bg-gradient-to-r from-blue-600 via-primary to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-heading font-bold text-base shadow-[0_10px_35px_rgba(37,99,235,0.45)] border border-blue-400/30 transition-all duration-300 cursor-pointer group/cta"
               >
                 <Briefcase className="w-5 h-5 text-cyan-300 transition-transform duration-300 group-hover/cta:scale-110" />
-                <span>Explore Current Opportunities</span>
-                <ArrowDown className="w-5 h-5 ml-1 text-cyan-300 transition-transform duration-300 group-hover/cta:translate-y-1 animate-bounce" />
+                <span>Explore Open Positions</span>
+                <ArrowDown className="w-4 h-4 ml-1 text-cyan-300 animate-bounce" />
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.03, y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => onApply?.("Job", "General Application (Future Openings)")}
+                className="inline-flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-white/10 hover:bg-white/15 text-white font-heading font-bold text-base border border-white/20 backdrop-blur-md transition-all duration-300 cursor-pointer"
+              >
+                <FileUp className="w-5 h-5 text-cyan-300" />
+                <span>Submit Resume for Future Openings</span>
               </motion.button>
             </div>
 

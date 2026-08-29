@@ -1,1 +1,58 @@
-[]
+[
+  {
+    "id": "job-fullstack-dev",
+    "title": "Full Stack Developer",
+    "department": "Engineering",
+    "type": "Job",
+    "employmentType": "Full-Time",
+    "experience": "1-3 Years / Freshers",
+    "location": "Hybrid / Remote",
+    "description": "Join our core engineering team building scalable web & cloud applications using React, Next.js, Node.js, and modern databases.",
+    "slug": "full-stack-developer",
+    "status": "Active",
+    "createdAt": "2026-08-29T04:47:25.775Z",
+    "updatedAt": "2026-08-29T04:47:25.775Z"
+  },
+  {
+    "id": "job-frontend-dev",
+    "title": "Frontend Developer",
+    "department": "Engineering",
+    "type": "Job",
+    "employmentType": "Full-Time",
+    "experience": "1-2 Years / Freshers",
+    "location": "Hybrid / Remote",
+    "description": "Craft modern, responsive, high-performance web user interfaces using React, Next.js, TypeScript, and Tailwind CSS.",
+    "slug": "frontend-developer",
+    "status": "Active",
+    "createdAt": "2026-08-29T04:47:25.775Z",
+    "updatedAt": "2026-08-29T04:47:25.775Z"
+  },
+  {
+    "id": "job-backend-dev",
+    "title": "Backend Developer",
+    "department": "Engineering",
+    "type": "Job",
+    "employmentType": "Full-Time",
+    "experience": "1-3 Years / Freshers",
+    "location": "Hybrid / Remote",
+    "description": "Design and construct resilient REST APIs, microservices, and database systems with Node.js, Express, PostgreSQL, and Firebase.",
+    "slug": "backend-developer",
+    "status": "Active",
+    "createdAt": "2026-08-29T04:47:25.775Z",
+    "updatedAt": "2026-08-29T04:47:25.775Z"
+  },
+  {
+    "id": "intern-uiux-designer",
+    "title": "UI/UX Designer",
+    "department": "Design & Media",
+    "type": "Internship",
+    "employmentType": "Internship",
+    "experience": "Student / Intern",
+    "location": "Remote / Hybrid",
+    "description": "Design intuitive user journeys, interactive wireframes, and modern visual UI mockups in Figma for live client projects.",
+    "slug": "ui-ux-designer-intern",
+    "status": "Active",
+    "createdAt": "2026-08-29T04:47:25.775Z",
+    "updatedAt": "2026-08-29T04:47:25.775Z"
+  }
+]

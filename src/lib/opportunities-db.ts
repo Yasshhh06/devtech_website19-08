@@ -32,42 +32,138 @@ function getStoragePath(): string {
   }
 }
 
+export const INITIAL_OPPORTUNITIES: Opportunity[] = [
+  {
+    id: "job-fullstack-dev",
+    title: "Full Stack Developer",
+    department: "Engineering",
+    type: "Job",
+    employmentType: "Full-Time",
+    experience: "1-3 Years / Freshers",
+    location: "Hybrid / Remote",
+    description: "Join our core engineering team building scalable web & cloud applications using React, Next.js, Node.js, and modern databases.",
+    slug: "full-stack-developer",
+    status: "Active",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "job-frontend-dev",
+    title: "Frontend Developer",
+    department: "Engineering",
+    type: "Job",
+    employmentType: "Full-Time",
+    experience: "1-2 Years / Freshers",
+    location: "Hybrid / Remote",
+    description: "Craft modern, responsive, high-performance web user interfaces using React, Next.js, TypeScript, and Tailwind CSS.",
+    slug: "frontend-developer",
+    status: "Active",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "job-backend-dev",
+    title: "Backend Developer",
+    department: "Engineering",
+    type: "Job",
+    employmentType: "Full-Time",
+    experience: "1-3 Years / Freshers",
+    location: "Hybrid / Remote",
+    description: "Design and construct resilient REST APIs, microservices, and database systems with Node.js, Express, PostgreSQL, and Firebase.",
+    slug: "backend-developer",
+    status: "Active",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: "intern-uiux-designer",
+    title: "UI/UX Designer",
+    department: "Design & Media",
+    type: "Internship",
+    employmentType: "Internship",
+    experience: "Student / Intern",
+    location: "Remote / Hybrid",
+    description: "Design intuitive user journeys, interactive wireframes, and modern visual UI mockups in Figma for live client projects.",
+    slug: "ui-ux-designer-intern",
+    status: "Active",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  }
+];
+
 /**
  * Fetch all opportunities from Firebase Firestore (if configured) or local storage
  */
 export async function getOpportunities(): Promise<Opportunity[]> {
+  const map = new Map<string, Opportunity>();
+
+  // 1. Initialize map with initial default opportunities
+  INITIAL_OPPORTUNITIES.forEach(opp => {
+    map.set(opp.id, opp);
+  });
+
+  // 2. Merge local storage file
+  try {
+    const filePath = getStoragePath();
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath, "utf-8");
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((item: Opportunity) => {
+          if (item && item.id) {
+            map.set(item.id, item);
+          }
+        });
+      }
+    }
+  } catch (error) {
+    console.error("[OpportunitiesDB] Error reading storage:", error);
+  }
+
+  // 3. Merge Firebase Firestore collection & sync missing initial items
   if (db && isFirebaseConfigured()) {
     try {
       const colRef = collection(db, "opportunities");
       const snapshot = await getDocs(colRef);
-      const items: Opportunity[] = [];
+      const existingDocIds = new Set<string>();
+
       snapshot.forEach(docSnap => {
         const data = docSnap.data() as Opportunity;
-        items.push({
-          ...data,
-          id: data.id || docSnap.id
-        });
+        const docId = data.id || docSnap.id;
+        if (data && docId) {
+          existingDocIds.add(docId);
+          map.set(docId, { ...data, id: docId });
+        }
       });
-      return items;
+
+      // Sync any missing INITIAL_OPPORTUNITIES to Firestore
+      for (const initialOpp of INITIAL_OPPORTUNITIES) {
+        if (!existingDocIds.has(initialOpp.id)) {
+          try {
+            const docRef = doc(db, "opportunities", initialOpp.id);
+            await setDoc(docRef, initialOpp);
+            console.log(`🔥 [Firebase Firestore] Synced default opportunity: ${initialOpp.id}`);
+          } catch (syncErr) {
+            console.warn("⚠️ Syncing initial opp to Firestore error:", syncErr);
+          }
+        }
+      }
     } catch (firebaseErr) {
       console.warn("⚠️ [Firebase Opportunities Warning] Error reading from Firestore:", firebaseErr);
     }
   }
 
-  // Local fallback
+  const result = Array.from(map.values());
+  
+  // Persist updated merged array to local storage file
   try {
     const filePath = getStoragePath();
-    const content = fs.readFileSync(filePath, "utf-8");
-    let items: Opportunity[] = JSON.parse(content);
-    if (!Array.isArray(items)) {
-      items = [];
-      fs.writeFileSync(filePath, JSON.stringify([], null, 2), "utf-8");
-    }
-    return items;
-  } catch (error) {
-    console.error("[OpportunitiesDB] Error reading storage:", error);
-    return [];
+    fs.writeFileSync(filePath, JSON.stringify(result, null, 2), "utf-8");
+  } catch (err) {
+    console.warn("[OpportunitiesDB] Error saving merged opportunities to disk:", err);
   }
+
+  return result;
 }
 
 /**
