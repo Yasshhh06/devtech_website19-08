@@ -3,27 +3,11 @@
 import { motion, Variants } from "framer-motion";
 import { Monitor, Smartphone, PenTool, ShieldCheck, Briefcase, TrendingUp, BrainCircuit, ArrowRight } from "lucide-react";
 
+import { scrollToElement } from "@/lib/utils";
+
 export default function Services() {
-  const handleWhatsApp = () => {
-    const phoneNumber = "919326093960";
-    const message = `Hello DevTech IT Solution Team,
-
-I came across your website and I'm interested in discussing a custom software solution for my business.
-
-Here are a few details about my requirements:
-
-• Business/Company Name: 
-• Industry: 
-• Project Type: 
-• Brief Project Description: 
-• Estimated Budget: 
-• Expected Timeline: 
-
-I would appreciate it if someone from your team could get in touch with me to discuss the project further.
-
-Thank you.`;
-    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+  const handleContact = () => {
+    scrollToElement("contact");
   };
 
   const services = [
@@ -160,7 +144,7 @@ Thank you.`;
               Let's discuss how our technology can accelerate your business vision.
             </p>
             <motion.button
-              onClick={handleWhatsApp}
+              onClick={handleContact}
               whileTap={{ scale: 0.95 }}
               className="bg-white text-slate-900 px-6 py-3 rounded-full font-semibold hover:bg-slate-100 hover:-translate-y-1 transition-all flex items-center shadow-sm relative z-10 cursor-pointer"
             >

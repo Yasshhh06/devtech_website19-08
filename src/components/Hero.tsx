@@ -13,11 +13,8 @@ export default function Hero() {
     { value: "Global", label: "Service Availability" },
   ];
 
-  const handleWhatsApp = () => {
-    const phoneNumber = "+919326093960";
-    const message = "Hello DevTech IT Solution,\n\nI would like to book a free consultation regarding my project. Please let me know how we can get started.";
-    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
+  const handleConsultation = () => {
+    scrollToElement("contact");
   };
 
   return (
@@ -70,7 +67,7 @@ export default function Hero() {
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
             <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }} transition={{ type: "spring", stiffness: 400, damping: 17 }} className="w-full sm:w-auto">
-              <Button onClick={handleWhatsApp} size="lg" className="w-full sm:w-auto cursor-pointer text-base h-14 px-8 rounded-full shadow-premium group bg-primary hover:bg-primary/90 text-white border-0">
+              <Button onClick={handleConsultation} size="lg" className="w-full sm:w-auto cursor-pointer text-base h-14 px-8 rounded-full shadow-premium group bg-primary hover:bg-primary/90 text-white border-0">
                 Get Free Consultation
                 <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>

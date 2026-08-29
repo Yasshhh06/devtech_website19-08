@@ -55,16 +55,6 @@ export default function GlobalFeatures() {
         style={{ scaleX }}
       />
 
-      {/* Floating WhatsApp Button */}
-      <a
-        href="https://wa.me/919326093960"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-24 right-6 w-14 h-14 bg-green-500 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl hover:-translate-y-1 hover:scale-105 transition-all duration-300 z-40"
-      >
-        <MessageCircle size={28} />
-      </a>
-
       {/* Back to Top Button */}
       <AnimatePresence>
         {showBackToTop && (

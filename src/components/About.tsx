@@ -79,7 +79,7 @@ export default function About() {
 
               <div className="prose prose-lg text-slate-600 mb-8">
                 <p className="mb-4">
-                  Born in Kalyan, Mumbai as a growing startup, DevTech IT Solution has rapidly evolved into a trusted technology partner for global enterprises and ambitious startups.
+                  Born in Mumbai as a growing startup, DevTech IT Solution has rapidly evolved into a trusted technology partner for global enterprises and ambitious startups.
                 </p>
                 <p>
                   Our mission is to bridge the gap between visionary ideas and robust technical execution. We believe that technology should be an enabler, not a bottleneck. That's why we combine deep engineering expertise with elegant design thinking.

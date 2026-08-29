@@ -200,10 +200,6 @@ function ApplicationContent() {
                   <Mail className="w-4 h-4 text-slate-400" />
                   <span>hr@devtechitsolution.com</span>
                 </a>
-                <a href="tel:+919326093960" className="flex items-center gap-2 text-slate-700 hover:text-primary transition-colors">
-                  <Phone className="w-4 h-4 text-slate-400" />
-                  <span>+91 9326093960</span>
-                </a>
               </div>
             </div>
 

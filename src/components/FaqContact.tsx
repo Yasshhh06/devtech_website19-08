@@ -142,7 +142,7 @@ export default function FaqContact() {
                 </div>
                 <div>
                   <h4 className="font-heading font-semibold text-slate-900">Visit Us</h4>
-                  <p className="text-slate-500 text-sm">Kalyan, Mumbai, India</p>
+                  <p className="text-slate-500 text-sm">Mumbai, India</p>
                 </div>
               </div>
             </motion.div>
