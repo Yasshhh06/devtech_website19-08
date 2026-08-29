@@ -96,6 +96,10 @@ export async function saveCareerApplication(record: ApplicationRecord): Promise<
   if (db && isFirebaseConfigured()) {
     try {
       const cleanRecord = JSON.parse(JSON.stringify(record));
+      // Remove heavy base64 dataUrl for Firestore doc to guarantee payload < 1MB limit
+      if (cleanRecord.documents?.resumeDataUrl) {
+        delete cleanRecord.documents.resumeDataUrl;
+      }
       const docRef = doc(db, "career_applications", record.id);
       await setDoc(docRef, cleanRecord);
       console.log(`🔥 [Firebase Firestore] Successfully saved application record: ${record.id}`);
@@ -117,7 +121,12 @@ export async function saveCareerApplication(record: ApplicationRecord): Promise<
       applications = [];
     }
 
-    applications.push(record);
+    const existingIndex = applications.findIndex(a => a.id === record.id);
+    if (existingIndex >= 0) {
+      applications[existingIndex] = record;
+    } else {
+      applications.push(record);
+    }
     fs.writeFileSync(file, JSON.stringify(applications, null, 2), "utf-8");
     return { success: true, id: record.id };
   } catch (error) {
@@ -155,7 +164,14 @@ export async function getCareerApplications(): Promise<ApplicationRecord[]> {
       snapshot.forEach(docSnap => {
         const data = docSnap.data() as ApplicationRecord;
         if (data && data.id) {
-          map.set(data.id, data);
+          const localItem = map.get(data.id);
+          map.set(data.id, {
+            ...data,
+            documents: {
+              ...data.documents,
+              resumeDataUrl: localItem?.documents?.resumeDataUrl || data.documents?.resumeDataUrl,
+            }
+          });
         }
       });
     } catch (firebaseErr) {
