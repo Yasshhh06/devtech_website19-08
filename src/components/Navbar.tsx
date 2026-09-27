@@ -76,14 +76,20 @@ export default function Navbar() {
         {/* Logo */}
         <Link
           href="/"
-          className="flex items-center gap-2 relative z-50"
+          className="flex items-center gap-3 relative z-50 group"
           onClick={() => {
             setActiveSection("Home");
             setMobileMenuOpen(false);
           }}
         >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icon.png"
+            alt="DevTech Logo Icon"
+            className="w-8 h-8 md:w-9 md:h-9 rounded-full object-contain shadow-md group-hover:scale-105 transition-transform border border-blue-400/20"
+          />
           <div
-            className={`text-2xl font-heading font-extrabold tracking-tight transition-colors duration-500 ${isScrolled ? "text-[#111827]" : "text-white drop-shadow-md"
+            className={`text-xl md:text-2xl font-heading font-extrabold tracking-tight transition-colors duration-500 ${isScrolled ? "text-[#111827]" : "text-white drop-shadow-md"
               }`}
           >
             DevTech <span className="text-[#2563EB]">IT Solution</span>

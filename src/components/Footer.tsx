@@ -7,9 +7,12 @@ export default function Footer() {
       <div className="container mx-auto px-4 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8 mb-16">
           <div className="lg:col-span-1">
-            <div className="text-2xl font-heading font-bold tracking-tight mb-4 text-slate-900">
-              DevTech<span className="text-primary">.</span>
-            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img 
+              src="/logo.png" 
+              alt="DevTech IT Solution Pvt Ltd" 
+              className="h-10 w-auto object-contain mb-4 bg-white p-1 rounded-lg border border-slate-100" 
+            />
             <p className="text-slate-500 mb-8 max-w-sm leading-relaxed">
               Your Vision. Our Tech. We build world-class enterprise solutions for forward-thinking brands globally.
             </p>

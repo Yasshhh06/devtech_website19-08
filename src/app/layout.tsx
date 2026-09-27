@@ -15,6 +15,14 @@ const plusJakarta = Plus_Jakarta_Sans({
 export const metadata: Metadata = {
   title: "DevTech IT Solution | Your Vision. Our Tech.",
   description: "DevTech IT Solution is a premium IT consulting and software development company providing world-class tech solutions to global businesses, startups, and enterprises.",
+  icons: {
+    icon: [
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.ico" }
+    ],
+    shortcut: "/icon.png",
+    apple: "/icon.png",
+  },
 };
 
 import SmoothScrollProvider from "@/components/providers/SmoothScrollProvider";

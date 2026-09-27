@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { db, isFirebaseConfigured } from "@/lib/firebase";
-import { collection, doc, setDoc, getDocs, query, orderBy } from "firebase/firestore";
+import { getMongoDb, isMongoDbConfigured } from "@/lib/mongodb";
 
 export interface ContactInquiryRecord {
   id: string;
@@ -15,6 +14,7 @@ export interface ContactInquiryRecord {
   status?: "New" | "Contacted" | "Closed";
 }
 
+const COLLECTION_NAME = "contact_inquiries";
 const DB_DIR = path.join(process.cwd(), "data");
 const DB_FILE = path.join(DB_DIR, "contact_inquiries.json");
 const TMP_FILE = path.join("/tmp", "contact_inquiries.json");
@@ -38,17 +38,23 @@ function getStoragePath(): string {
 }
 
 /**
- * Save client contact form inquiry to Firebase Firestore AND local file fallback
+ * Save client contact form inquiry to MongoDB & local file fallback
  */
 export async function saveContactInquiry(record: ContactInquiryRecord): Promise<{ success: boolean; id: string }> {
-  if (db && isFirebaseConfigured()) {
+  if (isMongoDbConfigured()) {
     try {
-      const cleanRecord = JSON.parse(JSON.stringify(record));
-      const docRef = doc(db, "contact_inquiries", record.id);
-      await setDoc(docRef, cleanRecord);
-      console.log(`🔥 [Firebase Firestore] Saved contact inquiry: ${record.id}`);
-    } catch (firebaseErr) {
-      console.warn("⚠️ [Firebase] Failed to write contact inquiry to Firestore:", firebaseErr);
+      const db = await getMongoDb();
+      if (db) {
+        const cleanRecord = JSON.parse(JSON.stringify(record));
+        await db.collection<ContactInquiryRecord>(COLLECTION_NAME).updateOne(
+          { id: record.id },
+          { $set: cleanRecord },
+          { upsert: true }
+        );
+        console.log(`🌱 [MongoDB] Saved contact inquiry: ${record.id}`);
+      }
+    } catch (err) {
+      console.warn("⚠️ [MongoDB Warning] Failed to save contact inquiry to MongoDB:", err);
     }
   }
 
@@ -72,7 +78,7 @@ export async function saveContactInquiry(record: ContactInquiryRecord): Promise<
 }
 
 /**
- * Read client contact form inquiries from Firestore or local fallback
+ * Read client contact form inquiries from MongoDB or local fallback
  */
 export async function getContactInquiries(): Promise<ContactInquiryRecord[]> {
   const map = new Map<string, ContactInquiryRecord>();
@@ -92,19 +98,21 @@ export async function getContactInquiries(): Promise<ContactInquiryRecord[]> {
     console.error("[ContactDB] Error reading local inquiries:", err);
   }
 
-  // 2. Read Firebase Firestore inquiries and merge
-  if (db && isFirebaseConfigured()) {
+  // 2. Read MongoDB inquiries and merge
+  if (isMongoDbConfigured()) {
     try {
-      const colRef = collection(db, "contact_inquiries");
-      const snapshot = await getDocs(colRef);
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data() as ContactInquiryRecord;
-        if (data && data.id) {
-          map.set(data.id, data);
-        }
-      });
-    } catch (firebaseErr) {
-      console.warn("⚠️ [Firebase] Failed to read contact inquiries from Firestore:", firebaseErr);
+      const db = await getMongoDb();
+      if (db) {
+        const collection = db.collection<ContactInquiryRecord>(COLLECTION_NAME);
+        const docs = await collection.find({}).sort({ submittedAt: -1 }).toArray();
+        docs.forEach(doc => {
+          if (doc && doc.id) {
+            map.set(doc.id, doc);
+          }
+        });
+      }
+    } catch (err) {
+      console.warn("⚠️ [MongoDB Warning] Failed to read contact inquiries from MongoDB:", err);
     }
   }
 

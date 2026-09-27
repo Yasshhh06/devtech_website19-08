@@ -66,7 +66,7 @@ export default function AdminLogin({ onSuccess }: AdminLoginProps) {
                   type="text"
                   name="username"
                   required
-                  placeholder="Enter admin email..."
+                  placeholder="Enter admin username..."
                   className="w-full pl-11 pr-4 py-3.5 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all placeholder:text-slate-400 shadow-sm"
                 />
               </div>

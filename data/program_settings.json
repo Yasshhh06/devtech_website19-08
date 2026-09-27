@@ -1,0 +1,38 @@
+{
+  "defaultFee": 2000,
+  "currency": "INR",
+  "roles": [
+    {
+      "id": "fullstack",
+      "title": "Full Stack Developer Intern",
+      "dept": "Engineering",
+      "type": "Full-Time / Part-Time",
+      "fee": 2000,
+      "active": true
+    },
+    {
+      "id": "ai_ml",
+      "title": "AI & Machine Learning Engineer Intern",
+      "dept": "AI/ML",
+      "type": "Full-Time / Part-Time",
+      "fee": 2000,
+      "active": true
+    },
+    {
+      "id": "cloud_devops",
+      "title": "Cloud & DevOps Specialist Intern",
+      "dept": "Engineering / Technology",
+      "type": "Full-Time",
+      "fee": 2000,
+      "active": true
+    },
+    {
+      "id": "ui_ux",
+      "title": "UI/UX Product Designer Intern",
+      "dept": "Product Design",
+      "type": "Full-Time",
+      "fee": 2000,
+      "active": true
+    }
+  ]
+}

@@ -4,8 +4,6 @@ import { z } from "zod";
 import { Resend } from "resend";
 import { headers } from "next/headers";
 import { saveCareerApplication, ApplicationRecord } from "@/lib/db";
-import { storage, isFirebaseConfigured } from "@/lib/firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const resend = new Resend(process.env.RESEND_API_KEY || "re_dummy");
 
@@ -171,21 +169,6 @@ export async function submitCareerApplication(formData: FormData) {
       console.warn("[CareerAction] Failed to save resume file to disk:", saveErr);
     }
 
-    // Upload resume file directly to Firebase Storage if Firebase is configured
-    let firebaseResumeUrl = "";
-    if (storage && isFirebaseConfigured()) {
-      try {
-        const storageRef = ref(storage, `resumes/${recordId}${fileExtension}`);
-        const uploadResult = await uploadBytes(storageRef, new Uint8Array(buffer), {
-          contentType: resumeFile.type || "application/pdf"
-        });
-        firebaseResumeUrl = await getDownloadURL(uploadResult.ref);
-        console.log(`🔥 [Firebase Storage] Resume uploaded successfully for ${recordId}: ${firebaseResumeUrl}`);
-      } catch (fbStorageErr) {
-        console.warn("⚠️ [Firebase Storage Warning] Could not upload resume to Firebase Storage, using fallback:", fbStorageErr);
-      }
-    }
-    
     const applicationRecord: ApplicationRecord = {
       id: recordId,
       submittedAt: new Date().toISOString(),
@@ -230,7 +213,7 @@ export async function submitCareerApplication(formData: FormData) {
         resumeName: resumeFile.name,
         resumeSize: resumeFile.size,
         resumeType: resumeFile.type || "application/pdf",
-        resumeUrl: firebaseResumeUrl || `/api/resumes/${recordId}`,
+        resumeUrl: `/api/resumes/${recordId}`,
         resumeDataUrl: `data:${resumeFile.type || "application/pdf"};base64,${buffer.toString("base64")}`,
       },
       screeningQuestions: {

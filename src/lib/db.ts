@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { db, isFirebaseConfigured } from "@/lib/firebase";
-import { collection, doc, setDoc, getDocs, query, orderBy } from "firebase/firestore";
+import { getMongoDb, isMongoDbConfigured } from "@/lib/mongodb";
 
 export interface ApplicationRecord {
   id: string;
@@ -66,6 +65,7 @@ export interface ApplicationRecord {
   digitalSignature?: string;
 }
 
+const COLLECTION_NAME = "career_applications";
 const DB_DIR = path.join(process.cwd(), "data");
 const DB_FILE = path.join(DB_DIR, "career_applications.json");
 const TMP_FILE = path.join("/tmp", "career_applications.json");
@@ -89,59 +89,61 @@ function getStoragePath(): string {
 }
 
 /**
- * Saves candidate application record to Firebase Firestore (if configured) AND local storage fallback
+ * Saves candidate application record to MongoDB (if configured) AND local JSON fallback
  */
 export async function saveCareerApplication(record: ApplicationRecord): Promise<{ success: boolean; id: string }> {
-  // 1. Try Firestore save if Firebase is configured
-  if (db && isFirebaseConfigured()) {
+  // 1. Save to MongoDB if configured
+  if (isMongoDbConfigured()) {
     try {
-      const cleanRecord = JSON.parse(JSON.stringify(record));
-      // Remove heavy base64 dataUrl for Firestore doc to guarantee payload < 1MB limit
-      if (cleanRecord.documents?.resumeDataUrl) {
-        delete cleanRecord.documents.resumeDataUrl;
+      const db = await getMongoDb();
+      if (db) {
+        const collection = db.collection<ApplicationRecord>(COLLECTION_NAME);
+        const cleanRecord = JSON.parse(JSON.stringify(record));
+        await collection.updateOne(
+          { id: record.id },
+          { $set: cleanRecord },
+          { upsert: true }
+        );
+        console.log(`🌱 [MongoDB] Saved career application: ${record.id}`);
       }
-      const docRef = doc(db, "career_applications", record.id);
-      await setDoc(docRef, cleanRecord);
-      console.log(`🔥 [Firebase Firestore] Successfully saved application record: ${record.id}`);
-    } catch (firebaseErr) {
-      console.warn("⚠️ [Firebase Firestore Warning] Failed to write to Firestore:", firebaseErr);
+    } catch (err) {
+      console.warn("⚠️ [MongoDB Warning] Failed to save career application to MongoDB:", err);
     }
   }
 
-  // 2. Always persist to local filesystem storage fallback
+  // 2. Save locally
   try {
     const file = getStoragePath();
     const data = fs.readFileSync(file, "utf-8");
-    let applications: ApplicationRecord[] = [];
-    
+    let list: ApplicationRecord[] = [];
     try {
-      applications = JSON.parse(data);
-      if (!Array.isArray(applications)) applications = [];
+      list = JSON.parse(data);
+      if (!Array.isArray(list)) list = [];
     } catch {
-      applications = [];
+      list = [];
     }
 
-    const existingIndex = applications.findIndex(a => a.id === record.id);
-    if (existingIndex >= 0) {
-      applications[existingIndex] = record;
+    const idx = list.findIndex(a => a.id === record.id);
+    if (idx >= 0) {
+      list[idx] = record;
     } else {
-      applications.push(record);
+      list.unshift(record);
     }
-    fs.writeFileSync(file, JSON.stringify(applications, null, 2), "utf-8");
+    fs.writeFileSync(file, JSON.stringify(list, null, 2), "utf-8");
     return { success: true, id: record.id };
   } catch (error) {
-    console.error("[Database] Error saving application record:", error);
+    console.error("[CareerDB] Error saving local record:", error);
     return { success: true, id: record.id };
   }
 }
 
 /**
- * Reads candidate application records from Firebase Firestore (if configured) or local storage
+ * Fetch all candidate application records from MongoDB OR local JSON fallback
  */
 export async function getCareerApplications(): Promise<ApplicationRecord[]> {
   const map = new Map<string, ApplicationRecord>();
 
-  // 1. Read local storage records first
+  // 1. Read local storage first
   try {
     const file = getStoragePath();
     if (fs.existsSync(file)) {
@@ -153,29 +155,31 @@ export async function getCareerApplications(): Promise<ApplicationRecord[]> {
       }
     }
   } catch (err) {
-    console.error("[Database] Error reading local applications:", err);
+    console.error("[CareerDB] Error reading local applications:", err);
   }
 
-  // 2. Read Firebase Firestore records and merge
-  if (db && isFirebaseConfigured()) {
+  // 2. Read MongoDB applications and merge
+  if (isMongoDbConfigured()) {
     try {
-      const colRef = collection(db, "career_applications");
-      const snapshot = await getDocs(colRef);
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data() as ApplicationRecord;
-        if (data && data.id) {
-          const localItem = map.get(data.id);
-          map.set(data.id, {
-            ...data,
-            documents: {
-              ...data.documents,
-              resumeDataUrl: localItem?.documents?.resumeDataUrl || data.documents?.resumeDataUrl,
-            }
-          });
-        }
-      });
-    } catch (firebaseErr) {
-      console.warn("⚠️ [Firebase Firestore Warning] Failed to read applications from Firestore:", firebaseErr);
+      const db = await getMongoDb();
+      if (db) {
+        const collection = db.collection<ApplicationRecord>(COLLECTION_NAME);
+        const docs = await collection.find({}).sort({ submittedAt: -1 }).toArray();
+        docs.forEach(doc => {
+          if (doc && doc.id) {
+            const localItem = map.get(doc.id);
+            map.set(doc.id, {
+              ...doc,
+              documents: {
+                ...doc.documents,
+                resumeDataUrl: localItem?.documents?.resumeDataUrl || doc.documents?.resumeDataUrl,
+              }
+            });
+          }
+        });
+      }
+    } catch (err) {
+      console.warn("⚠️ [MongoDB Warning] Failed to read career applications from MongoDB:", err);
     }
   }
 

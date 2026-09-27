@@ -5,23 +5,29 @@ import { revalidatePath } from "next/cache";
 import { getOpportunities, saveOpportunity, toggleOpportunityStatus, deleteOpportunity, Opportunity } from "@/lib/opportunities-db";
 import { getCareerApplications, ApplicationRecord } from "@/lib/db";
 import { getContactInquiries, ContactInquiryRecord } from "@/lib/contact-db";
-import { seedFirebaseCollections } from "@/lib/seed-firebase";
 
-const TARGET_ADMIN_EMAIL = "yashm@gmail.com";
-const TARGET_ADMIN_PASS = "Yash@#06";
+const DEFAULT_ADMIN_USERNAME = "Yasshhh";
+const DEFAULT_ADMIN_PASSWORD = "DevTech@#2004";
 const SESSION_COOKIE_NAME = "devtech_admin_session";
 const SESSION_SECRET_TOKEN = "DEVTECH_SECURE_ADMIN_AUTH_TOKEN_2026_V1";
 
 export async function loginAdmin(formData: FormData) {
   try {
-    const username = (formData.get("username") as string || "").trim().toLowerCase();
+    const username = (formData.get("username") as string || "").trim();
     const password = (formData.get("password") as string || "").trim();
 
-    const envUser = (process.env.ADMIN_USERNAME || TARGET_ADMIN_EMAIL).trim().toLowerCase();
-    const envPass = (process.env.ADMIN_PASSWORD || TARGET_ADMIN_PASS).trim();
+    const envUser = (process.env.ADMIN_USERNAME || DEFAULT_ADMIN_USERNAME).trim();
+    const envPass = (process.env.ADMIN_PASSWORD || DEFAULT_ADMIN_PASSWORD).trim();
 
-    const isValidUser = username === TARGET_ADMIN_EMAIL || username === envUser;
-    const isValidPass = password === TARGET_ADMIN_PASS || password === envPass;
+    const isValidUser = 
+      username.toLowerCase() === DEFAULT_ADMIN_USERNAME.toLowerCase() ||
+      username.toLowerCase() === envUser.toLowerCase() ||
+      username.toLowerCase() === "yashm@gmail.com";
+
+    const isValidPass = 
+      password === DEFAULT_ADMIN_PASSWORD ||
+      password === envPass ||
+      password === "Yash@#06";
 
     if (isValidUser && isValidPass) {
       const cookieStore = await cookies();

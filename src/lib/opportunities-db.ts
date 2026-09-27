@@ -1,8 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { CURRENT_OPPORTUNITIES, Opportunity as BaseOpportunity } from "./careers-data";
-import { db, isFirebaseConfigured } from "@/lib/firebase";
-import { collection, doc, setDoc, getDocs, deleteDoc, query, orderBy } from "firebase/firestore";
+import { Opportunity as BaseOpportunity } from "./careers-data";
+import { getMongoDb, isMongoDbConfigured } from "@/lib/mongodb";
 
 export interface Opportunity extends BaseOpportunity {
   status?: "Active" | "Closed";
@@ -10,6 +9,7 @@ export interface Opportunity extends BaseOpportunity {
   updatedAt?: string;
 }
 
+const COLLECTION_NAME = "career_opportunities";
 const DB_DIR = path.join(process.cwd(), "data");
 const DB_FILE = path.join(DB_DIR, "opportunities.json");
 const TMP_FILE = path.join("/tmp", "opportunities.json");
@@ -69,7 +69,7 @@ export const INITIAL_OPPORTUNITIES: Opportunity[] = [
     employmentType: "Full-Time",
     experience: "1-3 Years / Freshers",
     location: "Hybrid / Remote",
-    description: "Design and construct resilient REST APIs, microservices, and database systems with Node.js, Express, PostgreSQL, and Firebase.",
+    description: "Design and construct resilient REST APIs, microservices, and database systems with Node.js, Express, PostgreSQL, and MongoDB.",
     slug: "backend-developer",
     status: "Active",
     createdAt: new Date().toISOString(),
@@ -92,217 +92,173 @@ export const INITIAL_OPPORTUNITIES: Opportunity[] = [
 ];
 
 /**
- * Fetch all opportunities from Firebase Firestore (if configured) or local storage
+ * Fetch all opportunities from MongoDB (if configured) OR local storage fallback
  */
 export async function getOpportunities(): Promise<Opportunity[]> {
   const map = new Map<string, Opportunity>();
 
-  // 1. Initialize map with initial default opportunities
-  INITIAL_OPPORTUNITIES.forEach(opp => {
-    map.set(opp.id, opp);
+  // 1. Initialize map with default initial opportunities
+  INITIAL_OPPORTUNITIES.forEach(item => {
+    map.set(item.id, item);
   });
 
-  // 2. Merge local storage file
+  // 2. Read local JSON storage
   try {
-    const filePath = getStoragePath();
-    if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, "utf-8");
-      const parsed = JSON.parse(content);
-      if (Array.isArray(parsed)) {
-        parsed.forEach((item: Opportunity) => {
-          if (item && item.id) {
-            map.set(item.id, item);
-          }
+    const file = getStoragePath();
+    if (fs.existsSync(file)) {
+      const localList: Opportunity[] = JSON.parse(fs.readFileSync(file, "utf-8"));
+      if (Array.isArray(localList)) {
+        localList.forEach(item => {
+          if (item && item.id) map.set(item.id, item);
         });
       }
     }
-  } catch (error) {
-    console.error("[OpportunitiesDB] Error reading storage:", error);
+  } catch (err) {
+    console.error("[OpportunitiesDB] Error reading local file:", err);
   }
 
-  // 3. Merge Firebase Firestore collection & sync missing initial items
-  if (db && isFirebaseConfigured()) {
+  // 3. Fetch from MongoDB (if configured)
+  if (isMongoDbConfigured()) {
     try {
-      const colRef = collection(db, "opportunities");
-      const snapshot = await getDocs(colRef);
-      const existingDocIds = new Set<string>();
-
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data() as Opportunity;
-        const docId = data.id || docSnap.id;
-        if (data && docId) {
-          existingDocIds.add(docId);
-          map.set(docId, { ...data, id: docId });
-        }
-      });
-
-      // Sync any missing INITIAL_OPPORTUNITIES to Firestore
-      for (const initialOpp of INITIAL_OPPORTUNITIES) {
-        if (!existingDocIds.has(initialOpp.id)) {
-          try {
-            const docRef = doc(db, "opportunities", initialOpp.id);
-            await setDoc(docRef, initialOpp);
-            console.log(`🔥 [Firebase Firestore] Synced default opportunity: ${initialOpp.id}`);
-          } catch (syncErr) {
-            console.warn("⚠️ Syncing initial opp to Firestore error:", syncErr);
+      const db = await getMongoDb();
+      if (db) {
+        const docs = await db.collection<Opportunity>(COLLECTION_NAME).find({}).toArray();
+        docs.forEach(doc => {
+          if (doc && doc.id) {
+            map.set(doc.id, doc);
           }
-        }
+        });
       }
-    } catch (firebaseErr) {
-      console.warn("⚠️ [Firebase Opportunities Warning] Error reading from Firestore:", firebaseErr);
+    } catch (err) {
+      console.warn("⚠️ [MongoDB Warning] Failed to fetch opportunities from MongoDB:", err);
     }
   }
 
   const result = Array.from(map.values());
-  
-  // Persist updated merged array to local storage file
-  try {
-    const filePath = getStoragePath();
-    fs.writeFileSync(filePath, JSON.stringify(result, null, 2), "utf-8");
-  } catch (err) {
-    console.warn("[OpportunitiesDB] Error saving merged opportunities to disk:", err);
-  }
-
+  result.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   return result;
 }
 
 /**
- * Fetch active opportunities for public display
+ * Get active opportunities only
  */
 export async function getActiveOpportunities(): Promise<Opportunity[]> {
   const all = await getOpportunities();
-  return all.filter(op => op.status !== "Closed");
+  return all.filter(o => (o.status || "Active") === "Active");
 }
 
 /**
- * Create or update an opportunity in Firestore and local storage
+ * Save opportunity to MongoDB & local JSON fallback
  */
-export async function saveOpportunity(data: Partial<Opportunity>): Promise<{ success: boolean; opportunity: Opportunity }> {
-  const all = await getOpportunities();
+export async function saveOpportunity(opp: Partial<Opportunity>): Promise<{ success: boolean; id: string; opportunity: Opportunity }> {
   const now = new Date().toISOString();
 
-  let target: Opportunity;
-  if (data.id) {
-    const index = all.findIndex(o => o.id === data.id);
-    if (index !== -1) {
-      target = {
-        ...all[index],
-        ...data,
-        updatedAt: now,
-      } as Opportunity;
-      all[index] = target;
-    } else {
-      target = {
-        id: data.id,
-        title: data.title || "Untitled Role",
-        department: data.department || "Engineering",
-        type: data.type || "Job",
-        employmentType: data.employmentType || "Full-Time",
-        experience: data.experience || "1+ Years",
-        location: data.location || "Remote",
-        description: data.description || "",
-        slug: data.slug || (data.title || "role").toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-        status: data.status || "Active",
-        createdAt: now,
-        updatedAt: now,
-      };
-      all.unshift(target);
-    }
-  } else {
-    const slugBase = (data.title || "new-opening").toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    target = {
-      id: `${data.type === "Internship" ? "intern" : "job"}-${Date.now()}`,
-      title: data.title || "New Position",
-      department: data.department || "Engineering",
-      type: data.type || "Job",
-      employmentType: data.employmentType || "Full-Time",
-      experience: data.experience || "Freshers / Experienced",
-      location: data.location || "Remote",
-      description: data.description || "",
-      slug: `${slugBase}-${Math.floor(100 + Math.random() * 900)}`,
-      status: data.status || "Active",
-      createdAt: now,
-      updatedAt: now,
-    };
-    all.unshift(target);
-  }
+  const fullOpp: Opportunity = {
+    id: opp.id || `opp_${Date.now()}`,
+    title: opp.title || "New Opportunity",
+    department: opp.department || "Engineering",
+    type: opp.type || "Job",
+    employmentType: opp.employmentType || "Full-Time",
+    experience: opp.experience || "Fresher",
+    location: opp.location || "Remote",
+    description: opp.description || "",
+    slug: opp.slug || (opp.title ? opp.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "") : `opp-${Date.now()}`),
+    status: opp.status || "Active",
+    createdAt: opp.createdAt || now,
+    updatedAt: now,
+  };
 
-  // Write to Firebase Firestore if configured
-  if (db && isFirebaseConfigured()) {
+  // 1. Save to MongoDB
+  if (isMongoDbConfigured()) {
     try {
-      const docRef = doc(db, "opportunities", target.id);
-      await setDoc(docRef, target);
-      console.log(`🔥 [Firebase Firestore] Saved opportunity: ${target.id}`);
+      const db = await getMongoDb();
+      if (db) {
+        const cleanRecord = JSON.parse(JSON.stringify(fullOpp));
+        await db.collection<Opportunity>(COLLECTION_NAME).updateOne(
+          { id: fullOpp.id },
+          { $set: cleanRecord },
+          { upsert: true }
+        );
+        console.log(`🌱 [MongoDB] Saved career opportunity: ${fullOpp.id}`);
+      }
     } catch (err) {
-      console.warn("⚠️ [Firebase] Failed to save opportunity to Firestore:", err);
+      console.warn("⚠️ [MongoDB Warning] Failed to save opportunity to MongoDB:", err);
     }
   }
 
-  const filePath = getStoragePath();
-  fs.writeFileSync(filePath, JSON.stringify(all, null, 2), "utf-8");
-  return { success: true, opportunity: target };
+  // 2. Save locally
+  try {
+    const file = getStoragePath();
+    const data = fs.readFileSync(file, "utf-8");
+    let list: Opportunity[] = [];
+    try {
+      list = JSON.parse(data);
+      if (!Array.isArray(list)) list = [];
+    } catch {
+      list = [];
+    }
+
+    const idx = list.findIndex(o => o.id === fullOpp.id);
+    if (idx >= 0) {
+      list[idx] = fullOpp;
+    } else {
+      list.unshift(fullOpp);
+    }
+    fs.writeFileSync(file, JSON.stringify(list, null, 2), "utf-8");
+    return { success: true, id: fullOpp.id, opportunity: fullOpp };
+  } catch (err) {
+    console.error("[OpportunitiesDB] Error saving local opportunity:", err);
+    return { success: true, id: fullOpp.id, opportunity: fullOpp };
+  }
 }
 
 /**
- * Toggle opportunity active/closed status
+ * Toggle opportunity status (Active <-> Closed)
  */
-export async function toggleOpportunityStatus(id: string): Promise<{ success: boolean; newStatus?: string }> {
-  const all = await getOpportunities();
-  const index = all.findIndex(o => o.id === id || o.slug === id);
-  if (index === -1) return { success: false };
+export async function toggleOpportunityStatus(id: string): Promise<{ success: boolean; newStatus?: "Active" | "Closed" }> {
+  const opps = await getOpportunities();
+  const target = opps.find(o => o.id === id);
+  if (!target) return { success: false };
 
-  const targetId = all[index].id || id;
-  const currentStatus = all[index].status || "Active";
-  const newStatus = currentStatus === "Active" ? "Closed" : "Active";
-  all[index].status = newStatus;
-  all[index].updatedAt = new Date().toISOString();
+  const newStatus = target.status === "Closed" ? "Active" : "Closed";
+  target.status = newStatus;
+  target.updatedAt = new Date().toISOString();
 
-  if (db && isFirebaseConfigured()) {
-    try {
-      const docRef = doc(db, "opportunities", targetId);
-      await setDoc(docRef, { status: newStatus, updatedAt: all[index].updatedAt }, { merge: true });
-    } catch (err) {
-      console.warn("⚠️ [Firebase] Failed to toggle opportunity in Firestore:", err);
-    }
-  }
-
-  try {
-    const filePath = getStoragePath();
-    fs.writeFileSync(filePath, JSON.stringify(all, null, 2), "utf-8");
-  } catch (err) {
-    console.warn("[OpportunitiesDB] Storage file write error:", err);
-  }
+  await saveOpportunity(target);
   return { success: true, newStatus };
 }
 
 /**
- * Delete an opportunity by ID
+ * Delete opportunity from MongoDB & local JSON fallback
  */
 export async function deleteOpportunity(id: string): Promise<{ success: boolean }> {
-  const all = await getOpportunities();
-  const targetDoc = all.find(o => o.id === id || o.slug === id);
-  const targetId = targetDoc ? targetDoc.id : id;
-
-  const filtered = all.filter(o => o.id !== targetId && o.slug !== targetId && o.id !== id);
-
-  if (db && isFirebaseConfigured()) {
+  // 1. Delete from MongoDB
+  if (isMongoDbConfigured()) {
     try {
-      const docRef = doc(db, "opportunities", targetId);
-      await deleteDoc(docRef);
-      if (targetId !== id) {
-        await deleteDoc(doc(db, "opportunities", id));
+      const db = await getMongoDb();
+      if (db) {
+        await db.collection(COLLECTION_NAME).deleteOne({ id: id });
+        console.log(`🌱 [MongoDB] Deleted opportunity: ${id}`);
       }
-      console.log(`🔥 [Firebase] Deleted opportunity from Firestore: ${targetId}`);
     } catch (err) {
-      console.warn("⚠️ [Firebase] Failed to delete opportunity from Firestore:", err);
+      console.warn("⚠️ [MongoDB Warning] Failed to delete opportunity from MongoDB:", err);
     }
   }
 
+  // 2. Delete locally
   try {
-    const filePath = getStoragePath();
-    fs.writeFileSync(filePath, JSON.stringify(filtered, null, 2), "utf-8");
+    const file = getStoragePath();
+    const data = fs.readFileSync(file, "utf-8");
+    let list: Opportunity[] = [];
+    try {
+      list = JSON.parse(data);
+    } catch {
+      list = [];
+    }
+    list = list.filter(o => o.id !== id);
+    fs.writeFileSync(file, JSON.stringify(list, null, 2), "utf-8");
   } catch (err) {
-    console.warn("[OpportunitiesDB] Storage file write error:", err);
+    console.error("[OpportunitiesDB] Error deleting local opportunity:", err);
   }
 
   return { success: true };
