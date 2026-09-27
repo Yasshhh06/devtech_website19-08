@@ -97,27 +97,27 @@ export const INITIAL_OPPORTUNITIES: Opportunity[] = [
 export async function getOpportunities(): Promise<Opportunity[]> {
   const map = new Map<string, Opportunity>();
 
-  // 1. Initialize map with default initial opportunities
-  INITIAL_OPPORTUNITIES.forEach(item => {
-    map.set(item.id, item);
-  });
-
-  // 2. Read local JSON storage
+  // 1. Check local JSON storage first
+  let localFileExists = false;
   try {
     const file = getStoragePath();
     if (fs.existsSync(file)) {
-      const localList: Opportunity[] = JSON.parse(fs.readFileSync(file, "utf-8"));
-      if (Array.isArray(localList)) {
-        localList.forEach(item => {
-          if (item && item.id) map.set(item.id, item);
-        });
+      localFileExists = true;
+      const content = fs.readFileSync(file, "utf-8");
+      if (content.trim()) {
+        const localList: Opportunity[] = JSON.parse(content);
+        if (Array.isArray(localList)) {
+          localList.forEach(item => {
+            if (item && item.id) map.set(item.id, item);
+          });
+        }
       }
     }
   } catch (err) {
     console.error("[OpportunitiesDB] Error reading local file:", err);
   }
 
-  // 3. Fetch from MongoDB (if configured)
+  // 2. Fetch from MongoDB (if configured)
   if (isMongoDbConfigured()) {
     try {
       const db = await getMongoDb();
@@ -132,6 +132,18 @@ export async function getOpportunities(): Promise<Opportunity[]> {
     } catch (err) {
       console.warn("⚠️ [MongoDB Warning] Failed to fetch opportunities from MongoDB:", err);
     }
+  }
+
+  // 3. Seed INITIAL_OPPORTUNITIES ONLY if neither local file nor MongoDB has data
+  if (map.size === 0 && !localFileExists) {
+    INITIAL_OPPORTUNITIES.forEach(item => {
+      map.set(item.id, item);
+    });
+    // Persist seed to disk once so future reads respect deletions
+    try {
+      const file = getStoragePath();
+      fs.writeFileSync(file, JSON.stringify(INITIAL_OPPORTUNITIES, null, 2), "utf-8");
+    } catch {}
   }
 
   const result = Array.from(map.values());

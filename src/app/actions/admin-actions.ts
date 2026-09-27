@@ -3,8 +3,8 @@
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { getOpportunities, saveOpportunity, toggleOpportunityStatus, deleteOpportunity, Opportunity } from "@/lib/opportunities-db";
-import { getCareerApplications, ApplicationRecord } from "@/lib/db";
-import { getContactInquiries, ContactInquiryRecord } from "@/lib/contact-db";
+import { getCareerApplications, deleteCareerApplication, ApplicationRecord } from "@/lib/db";
+import { getContactInquiries, deleteContactInquiry, ContactInquiryRecord } from "@/lib/contact-db";
 
 const DEFAULT_ADMIN_USERNAME = "Yasshhh";
 const DEFAULT_ADMIN_PASSWORD = "DevTech@#2004";
@@ -168,5 +168,37 @@ export async function deleteOpportunityAction(id: string) {
   } catch (err) {
     console.error("[AdminAction] deleteOpportunityAction error:", err);
     return { success: false, error: "Failed to delete opportunity." };
+  }
+}
+
+export async function deleteCareerApplicationAction(id: string) {
+  const isAuthenticated = await checkAdminAuth();
+  if (!isAuthenticated) return { success: false, error: "Unauthorized." };
+
+  try {
+    const res = await deleteCareerApplication(id);
+    if (res.success) {
+      revalidatePath("/admin");
+    }
+    return res;
+  } catch (err) {
+    console.error("[AdminAction] deleteCareerApplicationAction error:", err);
+    return { success: false, error: "Failed to delete candidate application." };
+  }
+}
+
+export async function deleteContactInquiryAction(id: string) {
+  const isAuthenticated = await checkAdminAuth();
+  if (!isAuthenticated) return { success: false, error: "Unauthorized." };
+
+  try {
+    const res = await deleteContactInquiry(id);
+    if (res.success) {
+      revalidatePath("/admin");
+    }
+    return res;
+  } catch (err) {
+    console.error("[AdminAction] deleteContactInquiryAction error:", err);
+    return { success: false, error: "Failed to delete contact inquiry." };
   }
 }

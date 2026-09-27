@@ -120,3 +120,39 @@ export async function getContactInquiries(): Promise<ContactInquiryRecord[]> {
   result.sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
   return result;
 }
+
+/**
+ * Delete contact inquiry from MongoDB & local JSON fallback
+ */
+export async function deleteContactInquiry(id: string): Promise<{ success: boolean }> {
+  // 1. Delete from MongoDB
+  if (isMongoDbConfigured()) {
+    try {
+      const db = await getMongoDb();
+      if (db) {
+        await db.collection(COLLECTION_NAME).deleteOne({ id: id });
+        console.log(`🌱 [MongoDB] Deleted contact inquiry: ${id}`);
+      }
+    } catch (err) {
+      console.warn("⚠️ [MongoDB Warning] Failed to delete contact inquiry from MongoDB:", err);
+    }
+  }
+
+  // 2. Delete locally
+  try {
+    const file = getStoragePath();
+    const data = fs.readFileSync(file, "utf-8");
+    let list: ContactInquiryRecord[] = [];
+    try {
+      list = JSON.parse(data);
+    } catch {
+      list = [];
+    }
+    list = list.filter(i => i.id !== id);
+    fs.writeFileSync(file, JSON.stringify(list, null, 2), "utf-8");
+  } catch (err) {
+    console.error("[ContactDB] Error deleting local inquiry:", err);
+  }
+
+  return { success: true };
+}

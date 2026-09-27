@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { logoutAdmin, toggleOpportunityStatusAction, deleteOpportunityAction } from "@/app/actions/admin-actions";
+import { logoutAdmin, toggleOpportunityStatusAction, deleteOpportunityAction, deleteCareerApplicationAction, deleteContactInquiryAction } from "@/app/actions/admin-actions";
 import { Opportunity } from "@/lib/opportunities-db";
 import { ApplicationRecord } from "@/lib/db";
 import { ContactInquiryRecord } from "@/lib/contact-db";
@@ -72,6 +72,23 @@ export default function AdminDashboard({ initialOpportunities, initialApplicatio
   const handleDeleteOpp = async (id: string, title: string) => {
     if (confirm(`Are you sure you want to delete opening "${title}"? This cannot be undone.`)) {
       await deleteOpportunityAction(id);
+      onRefresh();
+    }
+  };
+
+  const handleDeleteApp = async (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete application from "${name}" (${id})? This cannot be undone.`)) {
+      await deleteCareerApplicationAction(id);
+      if (selectedApp?.id === id) {
+        setSelectedApp(null);
+      }
+      onRefresh();
+    }
+  };
+
+  const handleDeleteInquiry = async (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete client inquiry from "${name}"? This cannot be undone.`)) {
+      await deleteContactInquiryAction(id);
       onRefresh();
     }
   };
@@ -492,13 +509,22 @@ export default function AdminDashboard({ initialOpportunities, initialApplicatio
                               </a>
                             </td>
                           <td className="px-6 py-4 text-right">
-                            <button
-                              onClick={() => setSelectedApp(app)}
-                              className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all shadow-md shadow-indigo-500/20 inline-flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <span>Full Dossier</span>
-                              <ChevronRight className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => setSelectedApp(app)}
+                                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs transition-all shadow-md shadow-indigo-500/20 inline-flex items-center gap-1.5 cursor-pointer"
+                              >
+                                <span>Full Dossier</span>
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteApp(app.id, app.personalInfo.fullName)}
+                                className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors cursor-pointer"
+                                title="Delete Candidate Application"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                         );
@@ -573,13 +599,22 @@ export default function AdminDashboard({ initialOpportunities, initialApplicatio
                             {new Date(inq.submittedAt).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" })}
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <a
-                              href={`mailto:${inq.email}?subject=RE: DevTech IT Solution Inquiry`}
-                              className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs transition-all shadow-md shadow-teal-500/20 inline-flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <Mail className="w-3.5 h-3.5" />
-                              <span>Reply Client</span>
-                            </a>
+                            <div className="flex items-center justify-end gap-2">
+                              <a
+                                href={`mailto:${inq.email}?subject=RE: DevTech IT Solution Inquiry`}
+                                className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs transition-all shadow-md shadow-teal-500/20 inline-flex items-center gap-1.5 cursor-pointer"
+                              >
+                                <Mail className="w-3.5 h-3.5" />
+                                <span>Reply Client</span>
+                              </a>
+                              <button
+                                onClick={() => handleDeleteInquiry(inq.id, `${inq.firstName} ${inq.lastName}`)}
+                                className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors cursor-pointer"
+                                title="Delete Client Inquiry"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))
@@ -1044,17 +1079,27 @@ export default function AdminDashboard({ initialOpportunities, initialApplicatio
             </div>
 
             {/* Modal Sticky Footer */}
-            <div className="bg-slate-50 px-6 sm:px-8 py-4 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500 shrink-0">
+            <div className="bg-slate-50 px-6 sm:px-8 py-4 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 shrink-0">
               <span>DevTech IT Solutions Candidate Record ID: <strong>{selectedApp.id}</strong></span>
               
-              <a
-                href={selectedApp.documents.resumeUrl || selectedApp.documents.resumeDataUrl || `/api/resumes/${selectedApp.id}`}
-                download={selectedApp.documents.resumeName}
-                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download Resume ({selectedApp.documents.resumeName})</span>
-              </a>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDeleteApp(selectedApp.id, selectedApp.personalInfo.fullName)}
+                  className="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4 text-rose-600" />
+                  <span>Delete Dossier</span>
+                </button>
+
+                <a
+                  href={selectedApp.documents.resumeUrl || selectedApp.documents.resumeDataUrl || `/api/resumes/${selectedApp.id}`}
+                  download={selectedApp.documents.resumeName}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md shadow-emerald-500/20 transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download Resume ({selectedApp.documents.resumeName})</span>
+                </a>
+              </div>
             </div>
 
           </div>

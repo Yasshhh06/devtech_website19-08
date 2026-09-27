@@ -187,3 +187,39 @@ export async function getCareerApplications(): Promise<ApplicationRecord[]> {
   result.sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
   return result;
 }
+
+/**
+ * Delete career application from MongoDB & local JSON fallback
+ */
+export async function deleteCareerApplication(id: string): Promise<{ success: boolean }> {
+  // 1. Delete from MongoDB
+  if (isMongoDbConfigured()) {
+    try {
+      const db = await getMongoDb();
+      if (db) {
+        await db.collection(COLLECTION_NAME).deleteOne({ id: id });
+        console.log(`🌱 [MongoDB] Deleted career application: ${id}`);
+      }
+    } catch (err) {
+      console.warn("⚠️ [MongoDB Warning] Failed to delete career application from MongoDB:", err);
+    }
+  }
+
+  // 2. Delete locally
+  try {
+    const file = getStoragePath();
+    const data = fs.readFileSync(file, "utf-8");
+    let list: ApplicationRecord[] = [];
+    try {
+      list = JSON.parse(data);
+    } catch {
+      list = [];
+    }
+    list = list.filter(a => a.id !== id);
+    fs.writeFileSync(file, JSON.stringify(list, null, 2), "utf-8");
+  } catch (err) {
+    console.error("[CareerDB] Error deleting local application:", err);
+  }
+
+  return { success: true };
+}
