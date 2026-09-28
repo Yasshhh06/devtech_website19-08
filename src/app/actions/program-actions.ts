@@ -12,11 +12,13 @@ import {
   ProgramApplicationRecord,
   ProgramSettings
 } from "@/lib/programs-db";
+import { sanitizeString } from "@/lib/security";
 
 export async function submitProgramApplicationAction(record: ProgramApplicationRecord) {
   try {
     const res = await saveProgramApplication(record);
     revalidatePath("/devtechprogramsadmin");
+    revalidatePath("/devtechprograms-admin");
     return res;
   } catch (err: any) {
     console.error("[ProgramAction] Submit error:", err);
@@ -63,6 +65,7 @@ export async function updateProgramSettingsAction(settings: ProgramSettings) {
     const res = await updateProgramSettings(settings);
     revalidatePath("/devtechprograms");
     revalidatePath("/devtechprogramsadmin");
+    revalidatePath("/devtechprograms-admin");
     return res;
   } catch (err: any) {
     console.error("[ProgramAction] Update settings error:", err);
@@ -74,9 +77,13 @@ export async function updateApplicationStatusAction(id: string, status: ProgramA
   const isAuthenticated = await checkAdminAuth();
   if (!isAuthenticated) return { success: false, error: "Unauthorized access." };
 
+  const cleanId = sanitizeString(id);
+  if (!cleanId) return { success: false, error: "Invalid application ID." };
+
   try {
-    const res = await updateApplicationStatus(id, status);
+    const res = await updateApplicationStatus(cleanId, status);
     revalidatePath("/devtechprogramsadmin");
+    revalidatePath("/devtechprograms-admin");
     return res;
   } catch (err: any) {
     console.error("[ProgramAction] Update status error:", err);
@@ -86,11 +93,15 @@ export async function updateApplicationStatusAction(id: string, status: ProgramA
 
 export async function deleteProgramApplicationAction(id: string) {
   const isAuthenticated = await checkAdminAuth();
-  if (!isAuthenticated) return { success: false, error: "Unauthorized." };
+  if (!isAuthenticated) return { success: false, error: "Unauthorized access." };
+
+  const cleanId = sanitizeString(id);
+  if (!cleanId) return { success: false, error: "Invalid application ID." };
 
   try {
-    const res = await deleteProgramApplication(id);
+    const res = await deleteProgramApplication(cleanId);
     revalidatePath("/devtechprogramsadmin");
+    revalidatePath("/devtechprograms-admin");
     return { success: res.success, error: res.success ? undefined : "Failed to delete record." };
   } catch (err: any) {
     console.error("[ProgramAction] Delete error:", err);

@@ -4,30 +4,27 @@ import { z } from "zod";
 import { Resend } from "resend";
 import { headers } from "next/headers";
 import { saveContactInquiry } from "@/lib/contact-db";
+import { sanitizeString, sanitizeHtml } from "@/lib/security";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Rate Limiting Setup
-// Using a global map to track requests per IP.
-// Note: In a serverless environment (like Vercel), this state is lost on cold boots,
-// but it still provides basic protection against rapid, consecutive spam from a single instance.
 const rateLimitMap = new Map<string, { count: number; lastReset: number }>();
-const RATE_LIMIT_MAX = 5; // Max 5 requests
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour in ms
+const RATE_LIMIT_MAX = 5;
+const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour
 
 const contactSchema = z.object({
   firstName: z.string().min(2, "First name must be at least 2 characters").max(50),
   lastName: z.string().min(2, "Last name must be at least 2 characters").max(50),
   email: z.string().email("Please enter a valid email address").max(100),
   message: z.string().min(10, "Message must be at least 10 characters").max(2000),
-  honeypot: z.string().max(0, "Invalid submission"), // Must be empty
+  honeypot: z.string().max(0, "Invalid submission"),
 });
 
 export type ContactFormData = z.infer<typeof contactSchema>;
 
 export async function submitContactForm(data: ContactFormData) {
   try {
-    // 1. Get request headers for IP and User Agent
+    // 1. Request headers for IP and User Agent
     const headersList = await headers();
     const forwardedFor = headersList.get("x-forwarded-for");
     const ip = forwardedFor ? forwardedFor.split(",")[0] : "Unknown IP";
@@ -60,20 +57,23 @@ export async function submitContactForm(data: ContactFormData) {
       };
     }
 
-    // 4. Honeypot check (Bot protection)
+    // 4. Honeypot check
     if (validatedData.data.honeypot.length > 0) {
-      // Silently reject if honeypot is filled
       return { success: true }; 
     }
 
-    const { firstName, lastName, email, message } = validatedData.data;
+    const firstName = sanitizeString(validatedData.data.firstName);
+    const lastName = sanitizeString(validatedData.data.lastName);
+    const email = sanitizeString(validatedData.data.email);
+    const rawMessage = sanitizeString(validatedData.data.message);
+    const message = sanitizeHtml(rawMessage);
+
     const currentDateTime = new Date().toLocaleString("en-US", { 
       timeZone: "Asia/Kolkata",
       dateStyle: "full", 
       timeStyle: "long" 
     });
 
-    // Save contact inquiry to Firebase & DB
     const inquiryId = `INQ-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
     await saveContactInquiry({
       id: inquiryId,
@@ -87,7 +87,7 @@ export async function submitContactForm(data: ContactFormData) {
       status: "New"
     });
 
-    // 5. Build HTML Email Template
+    // 5. HTML Email Template
     const htmlEmail = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
         <div style="background-color: #0f172a; padding: 24px; text-align: center;">
@@ -122,7 +122,7 @@ export async function submitContactForm(data: ContactFormData) {
     `;
 
     // 6. Send Email using Resend
-    if (process.env.RESEND_API_KEY) {
+    if (process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== "re_dummy") {
       const { error } = await resend.emails.send({
         from: process.env.RESEND_FROM_EMAIL || "DevTech Website <onboarding@resend.dev>",
         to: "hiring@devtechitsolution.com",
@@ -133,12 +133,7 @@ export async function submitContactForm(data: ContactFormData) {
 
       if (error) {
         console.error("Resend Error:", error);
-        return { success: false, error: "Failed to send message. Please try again later." };
       }
-    } else {
-      // For testing without API key, just log
-      console.log("Mock Email Sent. API Key missing.");
-      console.log(htmlEmail);
     }
 
     return { success: true };

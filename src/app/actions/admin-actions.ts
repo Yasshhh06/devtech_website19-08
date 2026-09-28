@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getOpportunities, saveOpportunity, toggleOpportunityStatus, deleteOpportunity, Opportunity } from "@/lib/opportunities-db";
 import { getCareerApplications, deleteCareerApplication, ApplicationRecord } from "@/lib/db";
 import { getContactInquiries, deleteContactInquiry, ContactInquiryRecord } from "@/lib/contact-db";
+import { sanitizeString } from "@/lib/security";
 
 const DEFAULT_ADMIN_USERNAME = "Yasshhh";
 const DEFAULT_ADMIN_PASSWORD = "DevTech@#2004";
@@ -13,7 +14,7 @@ const SESSION_SECRET_TOKEN = "DEVTECH_SECURE_ADMIN_AUTH_TOKEN_2026_V1";
 
 export async function loginAdmin(formData: FormData) {
   try {
-    const username = (formData.get("username") as string || "").trim();
+    const username = sanitizeString(formData.get("username") as string || "");
     const password = (formData.get("password") as string || "").trim();
 
     const envUser = (process.env.ADMIN_USERNAME || DEFAULT_ADMIN_USERNAME).trim();
@@ -90,17 +91,17 @@ export async function getAdminDashboardDataAction() {
 
 export async function saveOpportunityAction(formData: FormData) {
   const isAuthenticated = await checkAdminAuth();
-  if (!isAuthenticated) return { success: false, error: "Unauthorized." };
+  if (!isAuthenticated) return { success: false, error: "Unauthorized access." };
 
   try {
-    const id = (formData.get("id") as string) || undefined;
-    const title = (formData.get("title") as string) || "";
-    const department = (formData.get("department") as string) || "Engineering";
+    const id = sanitizeString(formData.get("id") as string) || undefined;
+    const title = sanitizeString(formData.get("title") as string) || "";
+    const department = sanitizeString(formData.get("department") as string) || "Engineering";
     const type = (formData.get("type") as "Job" | "Internship") || "Job";
-    const employmentType = (formData.get("employmentType") as string) || "Full-Time";
-    const experience = (formData.get("experience") as string) || "Fresher";
-    const location = (formData.get("location") as string) || "Remote";
-    const description = (formData.get("description") as string) || "";
+    const employmentType = sanitizeString(formData.get("employmentType") as string) || "Full-Time";
+    const experience = sanitizeString(formData.get("experience") as string) || "Fresher";
+    const location = sanitizeString(formData.get("location") as string) || "Remote";
+    const description = sanitizeString(formData.get("description") as string) || "";
     const status = (formData.get("status") as "Active" | "Closed") || "Active";
 
     if (!title.trim()) return { success: false, error: "Title is required." };
@@ -122,6 +123,7 @@ export async function saveOpportunityAction(formData: FormData) {
     revalidatePath("/careers");
     revalidatePath("/careers/apply");
     revalidatePath("/admin");
+    revalidatePath("/carreradmin");
     revalidatePath("/api/opportunities");
 
     return { success: true, opportunity: res.opportunity };
@@ -133,15 +135,19 @@ export async function saveOpportunityAction(formData: FormData) {
 
 export async function toggleOpportunityStatusAction(id: string) {
   const isAuthenticated = await checkAdminAuth();
-  if (!isAuthenticated) return { success: false, error: "Unauthorized." };
+  if (!isAuthenticated) return { success: false, error: "Unauthorized access." };
+
+  const cleanId = sanitizeString(id);
+  if (!cleanId) return { success: false, error: "Invalid opportunity ID." };
 
   try {
-    const res = await toggleOpportunityStatus(id);
+    const res = await toggleOpportunityStatus(cleanId);
     if (res.success) {
       revalidatePath("/", "layout");
       revalidatePath("/careers");
       revalidatePath("/careers/apply");
       revalidatePath("/admin");
+      revalidatePath("/carreradmin");
       revalidatePath("/api/opportunities");
     }
     return res;
@@ -153,15 +159,19 @@ export async function toggleOpportunityStatusAction(id: string) {
 
 export async function deleteOpportunityAction(id: string) {
   const isAuthenticated = await checkAdminAuth();
-  if (!isAuthenticated) return { success: false, error: "Unauthorized." };
+  if (!isAuthenticated) return { success: false, error: "Unauthorized access." };
+
+  const cleanId = sanitizeString(id);
+  if (!cleanId) return { success: false, error: "Invalid opportunity ID." };
 
   try {
-    const res = await deleteOpportunity(id);
+    const res = await deleteOpportunity(cleanId);
     if (res.success) {
       revalidatePath("/", "layout");
       revalidatePath("/careers");
       revalidatePath("/careers/apply");
       revalidatePath("/admin");
+      revalidatePath("/carreradmin");
       revalidatePath("/api/opportunities");
     }
     return res;
@@ -173,12 +183,16 @@ export async function deleteOpportunityAction(id: string) {
 
 export async function deleteCareerApplicationAction(id: string) {
   const isAuthenticated = await checkAdminAuth();
-  if (!isAuthenticated) return { success: false, error: "Unauthorized." };
+  if (!isAuthenticated) return { success: false, error: "Unauthorized access." };
+
+  const cleanId = sanitizeString(id);
+  if (!cleanId) return { success: false, error: "Invalid application ID." };
 
   try {
-    const res = await deleteCareerApplication(id);
+    const res = await deleteCareerApplication(cleanId);
     if (res.success) {
       revalidatePath("/admin");
+      revalidatePath("/carreradmin");
     }
     return res;
   } catch (err) {
@@ -189,12 +203,16 @@ export async function deleteCareerApplicationAction(id: string) {
 
 export async function deleteContactInquiryAction(id: string) {
   const isAuthenticated = await checkAdminAuth();
-  if (!isAuthenticated) return { success: false, error: "Unauthorized." };
+  if (!isAuthenticated) return { success: false, error: "Unauthorized access." };
+
+  const cleanId = sanitizeString(id);
+  if (!cleanId) return { success: false, error: "Invalid inquiry ID." };
 
   try {
-    const res = await deleteContactInquiry(id);
+    const res = await deleteContactInquiry(cleanId);
     if (res.success) {
       revalidatePath("/admin");
+      revalidatePath("/carreradmin");
     }
     return res;
   } catch (err) {

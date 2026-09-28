@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { getMongoDb, isMongoDbConfigured } from "@/lib/mongodb";
+import { sanitizeString } from "@/lib/security";
 
 export interface ApplicationRecord {
   id: string;
@@ -92,19 +93,33 @@ function getStoragePath(): string {
  * Saves candidate application record to MongoDB (if configured) AND local JSON fallback
  */
 export async function saveCareerApplication(record: ApplicationRecord): Promise<{ success: boolean; id: string }> {
+  const cleanId = sanitizeString(record.id);
+  if (!cleanId) return { success: false, id: "" };
+
+  const sanitizedRecord: ApplicationRecord = {
+    ...record,
+    id: cleanId,
+    personalInfo: {
+      fullName: sanitizeString(record.personalInfo?.fullName),
+      email: sanitizeString(record.personalInfo?.email),
+      mobile: sanitizeString(record.personalInfo?.mobile),
+      city: sanitizeString(record.personalInfo?.city),
+    },
+  };
+
   // 1. Save to MongoDB if configured
   if (isMongoDbConfigured()) {
     try {
       const db = await getMongoDb();
       if (db) {
         const collection = db.collection<ApplicationRecord>(COLLECTION_NAME);
-        const cleanRecord = JSON.parse(JSON.stringify(record));
+        const cleanRecord = JSON.parse(JSON.stringify(sanitizedRecord));
         await collection.updateOne(
-          { id: record.id },
+          { id: cleanId },
           { $set: cleanRecord },
           { upsert: true }
         );
-        console.log(`🌱 [MongoDB] Saved career application: ${record.id}`);
+        console.log(`🌱 [MongoDB] Saved career application: ${cleanId}`);
       }
     } catch (err) {
       console.warn("⚠️ [MongoDB Warning] Failed to save career application to MongoDB:", err);
@@ -123,17 +138,17 @@ export async function saveCareerApplication(record: ApplicationRecord): Promise<
       list = [];
     }
 
-    const idx = list.findIndex(a => a.id === record.id);
+    const idx = list.findIndex(a => a.id === cleanId);
     if (idx >= 0) {
-      list[idx] = record;
+      list[idx] = sanitizedRecord;
     } else {
-      list.unshift(record);
+      list.unshift(sanitizedRecord);
     }
     fs.writeFileSync(file, JSON.stringify(list, null, 2), "utf-8");
-    return { success: true, id: record.id };
+    return { success: true, id: cleanId };
   } catch (error) {
     console.error("[CareerDB] Error saving local record:", error);
-    return { success: true, id: record.id };
+    return { success: true, id: cleanId };
   }
 }
 
@@ -143,22 +158,7 @@ export async function saveCareerApplication(record: ApplicationRecord): Promise<
 export async function getCareerApplications(): Promise<ApplicationRecord[]> {
   const map = new Map<string, ApplicationRecord>();
 
-  // 1. Read local storage first
-  try {
-    const file = getStoragePath();
-    if (fs.existsSync(file)) {
-      const localList: ApplicationRecord[] = JSON.parse(fs.readFileSync(file, "utf-8"));
-      if (Array.isArray(localList)) {
-        localList.forEach(item => {
-          if (item && item.id) map.set(item.id, item);
-        });
-      }
-    }
-  } catch (err) {
-    console.error("[CareerDB] Error reading local applications:", err);
-  }
-
-  // 2. Read MongoDB applications and merge
+  // 1. Read MongoDB applications first if configured
   if (isMongoDbConfigured()) {
     try {
       const db = await getMongoDb();
@@ -167,20 +167,41 @@ export async function getCareerApplications(): Promise<ApplicationRecord[]> {
         const docs = await collection.find({}).sort({ submittedAt: -1 }).toArray();
         docs.forEach(doc => {
           if (doc && doc.id) {
-            const localItem = map.get(doc.id);
-            map.set(doc.id, {
-              ...doc,
-              documents: {
-                ...doc.documents,
-                resumeDataUrl: localItem?.documents?.resumeDataUrl || doc.documents?.resumeDataUrl,
-              }
-            });
+            map.set(doc.id, doc);
           }
         });
       }
     } catch (err) {
       console.warn("⚠️ [MongoDB Warning] Failed to read career applications from MongoDB:", err);
     }
+  }
+
+  // 2. Read local storage and merge missing
+  try {
+    const file = getStoragePath();
+    if (fs.existsSync(file)) {
+      const localList: ApplicationRecord[] = JSON.parse(fs.readFileSync(file, "utf-8"));
+      if (Array.isArray(localList)) {
+        localList.forEach(item => {
+          if (item && item.id) {
+            const mongoItem = map.get(item.id);
+            if (!mongoItem) {
+              map.set(item.id, item);
+            } else {
+              map.set(item.id, {
+                ...mongoItem,
+                documents: {
+                  ...mongoItem.documents,
+                  resumeDataUrl: item.documents?.resumeDataUrl || mongoItem.documents?.resumeDataUrl,
+                }
+              });
+            }
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[CareerDB] Error reading local applications:", err);
   }
 
   const result = Array.from(map.values());
@@ -192,13 +213,16 @@ export async function getCareerApplications(): Promise<ApplicationRecord[]> {
  * Delete career application from MongoDB & local JSON fallback
  */
 export async function deleteCareerApplication(id: string): Promise<{ success: boolean }> {
+  const cleanId = sanitizeString(id);
+  if (!cleanId) return { success: false };
+
   // 1. Delete from MongoDB
   if (isMongoDbConfigured()) {
     try {
       const db = await getMongoDb();
       if (db) {
-        await db.collection(COLLECTION_NAME).deleteOne({ id: id });
-        console.log(`🌱 [MongoDB] Deleted career application: ${id}`);
+        await db.collection(COLLECTION_NAME).deleteOne({ id: cleanId });
+        console.log(`🌱 [MongoDB] Deleted career application: ${cleanId}`);
       }
     } catch (err) {
       console.warn("⚠️ [MongoDB Warning] Failed to delete career application from MongoDB:", err);
@@ -215,7 +239,7 @@ export async function deleteCareerApplication(id: string): Promise<{ success: bo
     } catch {
       list = [];
     }
-    list = list.filter(a => a.id !== id);
+    list = list.filter(a => a.id !== cleanId);
     fs.writeFileSync(file, JSON.stringify(list, null, 2), "utf-8");
   } catch (err) {
     console.error("[CareerDB] Error deleting local application:", err);

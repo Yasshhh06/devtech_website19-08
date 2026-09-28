@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { Opportunity as BaseOpportunity } from "./careers-data";
 import { getMongoDb, isMongoDbConfigured } from "@/lib/mongodb";
+import { sanitizeString } from "@/lib/security";
 
 export interface Opportunity extends BaseOpportunity {
   status?: "Active" | "Closed";
@@ -97,7 +98,37 @@ export const INITIAL_OPPORTUNITIES: Opportunity[] = [
 export async function getOpportunities(): Promise<Opportunity[]> {
   const map = new Map<string, Opportunity>();
 
-  // 1. Check local JSON storage first
+  // 1. Fetch from MongoDB first if configured
+  if (isMongoDbConfigured()) {
+    try {
+      const db = await getMongoDb();
+      if (db) {
+        const docs = await db.collection<Opportunity>(COLLECTION_NAME).find({}).toArray();
+        docs.forEach(doc => {
+          if (doc && doc.id) {
+            map.set(doc.id, {
+              id: doc.id,
+              title: doc.title,
+              department: doc.department,
+              type: doc.type,
+              employmentType: doc.employmentType,
+              experience: doc.experience,
+              location: doc.location,
+              description: doc.description,
+              slug: doc.slug,
+              status: doc.status || "Active",
+              createdAt: doc.createdAt,
+              updatedAt: doc.updatedAt
+            });
+          }
+        });
+      }
+    } catch (err) {
+      console.warn("⚠️ [MongoDB Warning] Failed to fetch opportunities from MongoDB:", err);
+    }
+  }
+
+  // 2. Check local JSON storage and merge
   let localFileExists = false;
   try {
     const file = getStoragePath();
@@ -108,7 +139,9 @@ export async function getOpportunities(): Promise<Opportunity[]> {
         const localList: Opportunity[] = JSON.parse(content);
         if (Array.isArray(localList)) {
           localList.forEach(item => {
-            if (item && item.id) map.set(item.id, item);
+            if (item && item.id && !map.has(item.id)) {
+              map.set(item.id, item);
+            }
           });
         }
       }
@@ -117,29 +150,11 @@ export async function getOpportunities(): Promise<Opportunity[]> {
     console.error("[OpportunitiesDB] Error reading local file:", err);
   }
 
-  // 2. Fetch from MongoDB (if configured)
-  if (isMongoDbConfigured()) {
-    try {
-      const db = await getMongoDb();
-      if (db) {
-        const docs = await db.collection<Opportunity>(COLLECTION_NAME).find({}).toArray();
-        docs.forEach(doc => {
-          if (doc && doc.id) {
-            map.set(doc.id, doc);
-          }
-        });
-      }
-    } catch (err) {
-      console.warn("⚠️ [MongoDB Warning] Failed to fetch opportunities from MongoDB:", err);
-    }
-  }
-
-  // 3. Seed INITIAL_OPPORTUNITIES ONLY if neither local file nor MongoDB has data
+  // 3. Seed INITIAL_OPPORTUNITIES ONLY if map is empty
   if (map.size === 0 && !localFileExists) {
     INITIAL_OPPORTUNITIES.forEach(item => {
       map.set(item.id, item);
     });
-    // Persist seed to disk once so future reads respect deletions
     try {
       const file = getStoragePath();
       fs.writeFileSync(file, JSON.stringify(INITIAL_OPPORTUNITIES, null, 2), "utf-8");
@@ -160,22 +175,34 @@ export async function getActiveOpportunities(): Promise<Opportunity[]> {
 }
 
 /**
+ * Get single opportunity by slug or id
+ */
+export async function getOpportunityBySlugOrId(slugOrId: string): Promise<Opportunity | null> {
+  const cleanKey = sanitizeString(slugOrId);
+  if (!cleanKey) return null;
+  const all = await getOpportunities();
+  return all.find(o => o.slug === cleanKey || o.id === cleanKey) || null;
+}
+
+/**
  * Save opportunity to MongoDB & local JSON fallback
  */
 export async function saveOpportunity(opp: Partial<Opportunity>): Promise<{ success: boolean; id: string; opportunity: Opportunity }> {
   const now = new Date().toISOString();
+  const rawId = sanitizeString(opp.id);
+  const rawTitle = sanitizeString(opp.title) || "New Opportunity";
 
   const fullOpp: Opportunity = {
-    id: opp.id || `opp_${Date.now()}`,
-    title: opp.title || "New Opportunity",
-    department: opp.department || "Engineering",
-    type: opp.type || "Job",
-    employmentType: opp.employmentType || "Full-Time",
-    experience: opp.experience || "Fresher",
-    location: opp.location || "Remote",
-    description: opp.description || "",
-    slug: opp.slug || (opp.title ? opp.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "") : `opp-${Date.now()}`),
-    status: opp.status || "Active",
+    id: rawId || `opp_${Date.now()}`,
+    title: rawTitle,
+    department: sanitizeString(opp.department) || "Engineering",
+    type: (opp.type === "Internship" ? "Internship" : "Job"),
+    employmentType: sanitizeString(opp.employmentType) || "Full-Time",
+    experience: sanitizeString(opp.experience) || "Fresher",
+    location: sanitizeString(opp.location) || "Remote",
+    description: sanitizeString(opp.description) || "",
+    slug: sanitizeString(opp.slug) || (rawTitle ? rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "") : `opp-${Date.now()}`),
+    status: (opp.status === "Closed" ? "Closed" : "Active"),
     createdAt: opp.createdAt || now,
     updatedAt: now,
   };
@@ -228,8 +255,9 @@ export async function saveOpportunity(opp: Partial<Opportunity>): Promise<{ succ
  * Toggle opportunity status (Active <-> Closed)
  */
 export async function toggleOpportunityStatus(id: string): Promise<{ success: boolean; newStatus?: "Active" | "Closed" }> {
+  const cleanId = sanitizeString(id);
   const opps = await getOpportunities();
-  const target = opps.find(o => o.id === id);
+  const target = opps.find(o => o.id === cleanId);
   if (!target) return { success: false };
 
   const newStatus = target.status === "Closed" ? "Active" : "Closed";
@@ -244,13 +272,16 @@ export async function toggleOpportunityStatus(id: string): Promise<{ success: bo
  * Delete opportunity from MongoDB & local JSON fallback
  */
 export async function deleteOpportunity(id: string): Promise<{ success: boolean }> {
+  const cleanId = sanitizeString(id);
+  if (!cleanId) return { success: false };
+
   // 1. Delete from MongoDB
   if (isMongoDbConfigured()) {
     try {
       const db = await getMongoDb();
       if (db) {
-        await db.collection(COLLECTION_NAME).deleteOne({ id: id });
-        console.log(`🌱 [MongoDB] Deleted opportunity: ${id}`);
+        await db.collection(COLLECTION_NAME).deleteOne({ id: cleanId });
+        console.log(`🌱 [MongoDB] Deleted opportunity: ${cleanId}`);
       }
     } catch (err) {
       console.warn("⚠️ [MongoDB Warning] Failed to delete opportunity from MongoDB:", err);
@@ -267,7 +298,7 @@ export async function deleteOpportunity(id: string): Promise<{ success: boolean 
     } catch {
       list = [];
     }
-    list = list.filter(o => o.id !== id);
+    list = list.filter(o => o.id !== cleanId);
     fs.writeFileSync(file, JSON.stringify(list, null, 2), "utf-8");
   } catch (err) {
     console.error("[OpportunitiesDB] Error deleting local opportunity:", err);

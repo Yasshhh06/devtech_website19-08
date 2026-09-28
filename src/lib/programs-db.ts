@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { getMongoDb, isMongoDbConfigured } from "@/lib/mongodb";
+import { sanitizeString } from "@/lib/security";
 
 export interface ProgramRoleSetting {
   id: string;
@@ -198,9 +199,20 @@ export async function updateProgramSettings(settings: ProgramSettings): Promise<
  * Save candidate application record
  */
 export async function saveProgramApplication(record: ProgramApplicationRecord): Promise<{ success: boolean; id: string }> {
-  if (!record.status) {
-    record.status = "SUBMITTED";
-  }
+  const cleanId = sanitizeString(record.id);
+  if (!cleanId) return { success: false, id: "" };
+
+  const sanitizedRecord: ProgramApplicationRecord = {
+    ...record,
+    id: cleanId,
+    status: record.status || "SUBMITTED",
+    personalInfo: {
+      fullName: sanitizeString(record.personalInfo?.fullName),
+      email: sanitizeString(record.personalInfo?.email),
+      mobile: sanitizeString(record.personalInfo?.mobile),
+      city: sanitizeString(record.personalInfo?.city),
+    },
+  };
 
   // Save to MongoDB
   if (isMongoDbConfigured()) {
@@ -208,13 +220,13 @@ export async function saveProgramApplication(record: ProgramApplicationRecord): 
       const db = await getMongoDb();
       if (db) {
         const collection = db.collection<ProgramApplicationRecord>(COLLECTION_NAME);
-        const cleanRecord = JSON.parse(JSON.stringify(record));
+        const cleanRecord = JSON.parse(JSON.stringify(sanitizedRecord));
         await collection.updateOne(
-          { id: record.id },
+          { id: cleanId },
           { $set: cleanRecord },
           { upsert: true }
         );
-        console.log(`🌱 [MongoDB] Saved application: ${record.id}`);
+        console.log(`🌱 [MongoDB] Saved application: ${cleanId}`);
       }
     } catch (err) {
       console.warn("⚠️ [MongoDB Warning] Failed to save application to MongoDB:", err);
@@ -233,17 +245,17 @@ export async function saveProgramApplication(record: ProgramApplicationRecord): 
       apps = [];
     }
 
-    const idx = apps.findIndex(a => a.id === record.id);
+    const idx = apps.findIndex(a => a.id === cleanId);
     if (idx >= 0) {
-      apps[idx] = record;
+      apps[idx] = sanitizedRecord;
     } else {
-      apps.push(record);
+      apps.push(sanitizedRecord);
     }
     fs.writeFileSync(file, JSON.stringify(apps, null, 2), "utf-8");
-    return { success: true, id: record.id };
+    return { success: true, id: cleanId };
   } catch (error) {
     console.error("[ProgramsDB] Error saving local record:", error);
-    return { success: true, id: record.id };
+    return { success: true, id: cleanId };
   }
 }
 
@@ -260,6 +272,10 @@ export async function updateProgramPaymentStatus(
     status: "PAID" | "FAILED";
   }
 ): Promise<{ success: boolean }> {
+  const cleanId = sanitizeString(id);
+  const cleanOrderId = sanitizeString(paymentDetails.orderId);
+  const cleanPaymentId = sanitizeString(paymentDetails.paymentId);
+  const cleanSignature = sanitizeString(paymentDetails.signature);
   const paidAt = new Date().toISOString();
 
   if (isMongoDbConfigured()) {
@@ -267,12 +283,12 @@ export async function updateProgramPaymentStatus(
       const db = await getMongoDb();
       if (db) {
         await db.collection(COLLECTION_NAME).updateOne(
-          { $or: [{ id: id }, { "paymentInfo.orderId": paymentDetails.orderId }] },
+          { $or: [{ id: cleanId }, { "paymentInfo.orderId": cleanOrderId }] },
           {
             $set: {
-              "paymentInfo.orderId": paymentDetails.orderId,
-              "paymentInfo.paymentId": paymentDetails.paymentId,
-              "paymentInfo.signature": paymentDetails.signature || "",
+              "paymentInfo.orderId": cleanOrderId,
+              "paymentInfo.paymentId": cleanPaymentId,
+              "paymentInfo.signature": cleanSignature,
               "paymentInfo.amount": paymentDetails.amount,
               "paymentInfo.status": paymentDetails.status,
               "paymentInfo.paidAt": paidAt,
@@ -296,13 +312,13 @@ export async function updateProgramPaymentStatus(
       apps = [];
     }
 
-    const idx = apps.findIndex(a => a.id === id || a.paymentInfo?.orderId === paymentDetails.orderId);
+    const idx = apps.findIndex(a => a.id === cleanId || a.paymentInfo?.orderId === cleanOrderId);
     if (idx >= 0) {
       apps[idx].paymentInfo = {
         ...apps[idx].paymentInfo,
-        orderId: paymentDetails.orderId,
-        paymentId: paymentDetails.paymentId,
-        signature: paymentDetails.signature || "",
+        orderId: cleanOrderId,
+        paymentId: cleanPaymentId,
+        signature: cleanSignature,
         amount: paymentDetails.amount,
         status: paymentDetails.status,
         paidAt: paidAt
@@ -320,12 +336,15 @@ export async function updateProgramPaymentStatus(
  * Update candidate application status from Admin
  */
 export async function updateApplicationStatus(id: string, status: ProgramApplicationRecord["status"]): Promise<{ success: boolean; error?: string }> {
+  const cleanId = sanitizeString(id);
+  if (!cleanId) return { success: false, error: "Invalid ID" };
+
   if (isMongoDbConfigured()) {
     try {
       const db = await getMongoDb();
       if (db) {
         await db.collection(COLLECTION_NAME).updateOne(
-          { id: id },
+          { id: cleanId },
           { $set: { status: status } }
         );
       }
@@ -345,7 +364,7 @@ export async function updateApplicationStatus(id: string, status: ProgramApplica
       apps = [];
     }
 
-    const idx = apps.findIndex(a => a.id === id);
+    const idx = apps.findIndex(a => a.id === cleanId);
     if (idx >= 0) {
       apps[idx].status = status;
       fs.writeFileSync(file, JSON.stringify(apps, null, 2), "utf-8");
@@ -363,20 +382,6 @@ export async function updateApplicationStatus(id: string, status: ProgramApplica
 export async function getProgramApplications(): Promise<ProgramApplicationRecord[]> {
   const map = new Map<string, ProgramApplicationRecord>();
 
-  try {
-    const file = getStoragePath();
-    if (fs.existsSync(file)) {
-      const list: ProgramApplicationRecord[] = JSON.parse(fs.readFileSync(file, "utf-8"));
-      if (Array.isArray(list)) {
-        list.forEach(item => {
-          if (item && item.id) map.set(item.id, item);
-        });
-      }
-    }
-  } catch (err) {
-    console.error("[ProgramsDB] Error reading local applications:", err);
-  }
-
   if (isMongoDbConfigured()) {
     try {
       const db = await getMongoDb();
@@ -385,20 +390,40 @@ export async function getProgramApplications(): Promise<ProgramApplicationRecord
         const docs = await collection.find({}).sort({ submittedAt: -1 }).toArray();
         docs.forEach(doc => {
           if (doc && doc.id) {
-            const localItem = map.get(doc.id);
-            map.set(doc.id, {
-              ...doc,
-              documents: {
-                ...doc.documents,
-                resumeDataUrl: localItem?.documents?.resumeDataUrl || doc.documents?.resumeDataUrl,
-              }
-            });
+            map.set(doc.id, doc);
           }
         });
       }
     } catch (err) {
       console.warn("⚠️ [MongoDB Warning] Failed to read program applications from MongoDB:", err);
     }
+  }
+
+  try {
+    const file = getStoragePath();
+    if (fs.existsSync(file)) {
+      const list: ProgramApplicationRecord[] = JSON.parse(fs.readFileSync(file, "utf-8"));
+      if (Array.isArray(list)) {
+        list.forEach(item => {
+          if (item && item.id) {
+            const mongoItem = map.get(item.id);
+            if (!mongoItem) {
+              map.set(item.id, item);
+            } else {
+              map.set(item.id, {
+                ...mongoItem,
+                documents: {
+                  ...mongoItem.documents,
+                  resumeDataUrl: item.documents?.resumeDataUrl || mongoItem.documents?.resumeDataUrl,
+                }
+              });
+            }
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[ProgramsDB] Error reading local applications:", err);
   }
 
   const result = Array.from(map.values());
@@ -410,11 +435,14 @@ export async function getProgramApplications(): Promise<ProgramApplicationRecord
  * Delete application record
  */
 export async function deleteProgramApplication(id: string): Promise<{ success: boolean }> {
+  const cleanId = sanitizeString(id);
+  if (!cleanId) return { success: false };
+
   if (isMongoDbConfigured()) {
     try {
       const db = await getMongoDb();
       if (db) {
-        await db.collection(COLLECTION_NAME).deleteOne({ id: id });
+        await db.collection(COLLECTION_NAME).deleteOne({ id: cleanId });
       }
     } catch (err) {
       console.warn("⚠️ [MongoDB Warning] Failed to delete from MongoDB:", err);
@@ -430,7 +458,7 @@ export async function deleteProgramApplication(id: string): Promise<{ success: b
     } catch {
       apps = [];
     }
-    apps = apps.filter(a => a.id !== id);
+    apps = apps.filter(a => a.id !== cleanId);
     fs.writeFileSync(file, JSON.stringify(apps, null, 2), "utf-8");
   } catch (err) {
     console.error("[ProgramsDB] Error deleting local record:", err);

@@ -14,20 +14,16 @@ declare global {
 
 function getClientPromise(): Promise<MongoClient> | null {
   const uri = (process.env.MONGODB_URI || "").trim();
-  if (!uri || uri.includes("localhost:27017")) {
+  if (!uri) {
     return null;
   }
 
-  if (process.env.NODE_ENV === "development") {
-    if (!global._mongoClientPromise) {
-      const client = new MongoClient(uri, options);
-      global._mongoClientPromise = client.connect();
-    }
-    return global._mongoClientPromise;
-  } else {
+  // Reuse cached client promise in both development and production (critical for serverless connection pooling)
+  if (!global._mongoClientPromise) {
     const client = new MongoClient(uri, options);
-    return client.connect();
+    global._mongoClientPromise = client.connect();
   }
+  return global._mongoClientPromise;
 }
 
 export async function getMongoDb(dbName: string = "devtech_db"): Promise<Db | null> {
@@ -46,5 +42,5 @@ export async function getMongoDb(dbName: string = "devtech_db"): Promise<Db | nu
 
 export function isMongoDbConfigured(): boolean {
   const uri = (process.env.MONGODB_URI || "").trim();
-  return Boolean(uri && uri.length > 0 && !uri.includes("localhost:27017"));
+  return Boolean(uri && uri.length > 0);
 }

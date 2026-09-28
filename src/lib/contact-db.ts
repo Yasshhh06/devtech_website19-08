@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { getMongoDb, isMongoDbConfigured } from "@/lib/mongodb";
+import { sanitizeString } from "@/lib/security";
 
 export interface ContactInquiryRecord {
   id: string;
@@ -41,17 +42,29 @@ function getStoragePath(): string {
  * Save client contact form inquiry to MongoDB & local file fallback
  */
 export async function saveContactInquiry(record: ContactInquiryRecord): Promise<{ success: boolean; id: string }> {
+  const cleanId = sanitizeString(record.id);
+  if (!cleanId) return { success: false, id: "" };
+
+  const sanitizedRecord: ContactInquiryRecord = {
+    ...record,
+    id: cleanId,
+    firstName: sanitizeString(record.firstName),
+    lastName: sanitizeString(record.lastName),
+    email: sanitizeString(record.email),
+    message: sanitizeString(record.message),
+  };
+
   if (isMongoDbConfigured()) {
     try {
       const db = await getMongoDb();
       if (db) {
-        const cleanRecord = JSON.parse(JSON.stringify(record));
+        const cleanRecord = JSON.parse(JSON.stringify(sanitizedRecord));
         await db.collection<ContactInquiryRecord>(COLLECTION_NAME).updateOne(
-          { id: record.id },
+          { id: cleanId },
           { $set: cleanRecord },
           { upsert: true }
         );
-        console.log(`🌱 [MongoDB] Saved contact inquiry: ${record.id}`);
+        console.log(`🌱 [MongoDB] Saved contact inquiry: ${cleanId}`);
       }
     } catch (err) {
       console.warn("⚠️ [MongoDB Warning] Failed to save contact inquiry to MongoDB:", err);
@@ -68,12 +81,12 @@ export async function saveContactInquiry(record: ContactInquiryRecord): Promise<
     } catch {
       list = [];
     }
-    list.unshift(record);
+    list.unshift(sanitizedRecord);
     fs.writeFileSync(file, JSON.stringify(list, null, 2), "utf-8");
-    return { success: true, id: record.id };
+    return { success: true, id: cleanId };
   } catch (error) {
     console.error("[ContactDB] Error saving inquiry:", error);
-    return { success: true, id: record.id };
+    return { success: true, id: cleanId };
   }
 }
 
@@ -83,22 +96,7 @@ export async function saveContactInquiry(record: ContactInquiryRecord): Promise<
 export async function getContactInquiries(): Promise<ContactInquiryRecord[]> {
   const map = new Map<string, ContactInquiryRecord>();
 
-  // 1. Read local storage inquiries first
-  try {
-    const file = getStoragePath();
-    if (fs.existsSync(file)) {
-      const localList: ContactInquiryRecord[] = JSON.parse(fs.readFileSync(file, "utf-8"));
-      if (Array.isArray(localList)) {
-        localList.forEach(item => {
-          if (item && item.id) map.set(item.id, item);
-        });
-      }
-    }
-  } catch (err) {
-    console.error("[ContactDB] Error reading local inquiries:", err);
-  }
-
-  // 2. Read MongoDB inquiries and merge
+  // 1. Read MongoDB inquiries first if configured
   if (isMongoDbConfigured()) {
     try {
       const db = await getMongoDb();
@@ -116,6 +114,23 @@ export async function getContactInquiries(): Promise<ContactInquiryRecord[]> {
     }
   }
 
+  // 2. Read local storage inquiries and merge missing
+  try {
+    const file = getStoragePath();
+    if (fs.existsSync(file)) {
+      const localList: ContactInquiryRecord[] = JSON.parse(fs.readFileSync(file, "utf-8"));
+      if (Array.isArray(localList)) {
+        localList.forEach(item => {
+          if (item && item.id && !map.has(item.id)) {
+            map.set(item.id, item);
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[ContactDB] Error reading local inquiries:", err);
+  }
+
   const result = Array.from(map.values());
   result.sort((a, b) => new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime());
   return result;
@@ -125,13 +140,16 @@ export async function getContactInquiries(): Promise<ContactInquiryRecord[]> {
  * Delete contact inquiry from MongoDB & local JSON fallback
  */
 export async function deleteContactInquiry(id: string): Promise<{ success: boolean }> {
+  const cleanId = sanitizeString(id);
+  if (!cleanId) return { success: false };
+
   // 1. Delete from MongoDB
   if (isMongoDbConfigured()) {
     try {
       const db = await getMongoDb();
       if (db) {
-        await db.collection(COLLECTION_NAME).deleteOne({ id: id });
-        console.log(`🌱 [MongoDB] Deleted contact inquiry: ${id}`);
+        await db.collection(COLLECTION_NAME).deleteOne({ id: cleanId });
+        console.log(`🌱 [MongoDB] Deleted contact inquiry: ${cleanId}`);
       }
     } catch (err) {
       console.warn("⚠️ [MongoDB Warning] Failed to delete contact inquiry from MongoDB:", err);
@@ -148,7 +166,7 @@ export async function deleteContactInquiry(id: string): Promise<{ success: boole
     } catch {
       list = [];
     }
-    list = list.filter(i => i.id !== id);
+    list = list.filter(i => i.id !== cleanId);
     fs.writeFileSync(file, JSON.stringify(list, null, 2), "utf-8");
   } catch (err) {
     console.error("[ContactDB] Error deleting local inquiry:", err);
